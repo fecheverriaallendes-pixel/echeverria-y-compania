@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "Sale": {
+      "title": "Sale",
+      "description": "Definition of a sale document in Firestore",
+      "type": "object",
+      "properties": {
+        "numeroVenta": { "type": "number" },
+        "fecha": { "type": "string" },
+        "cliente": { "type": "string" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pendiente", "Enviado"] },
+        "enviado": { "type": "boolean" },
+        "datosCompletos": { "type": "boolean" }
+      },
+      "required": ["numeroVenta", "fecha", "cliente", "total", "status"]
+    },
+    "StockItem": {
+      "title": "StockItem",
+      "description": "Definition of a stock item",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "stockActual": { "type": "number" }
+      },
+      "required": ["codigo", "stockActual"]
+    }
+  },
+  "firestore": {
+    "/sales/{saleId}": {
+      "schema": { "$ref": "Sale" },
+      "description": "Sales collection"
+    },
+    "/stock/{itemId}": {
+      "schema": { "$ref": "StockItem" },
+      "description": "Stock collection"
+    }
+  }
+}
