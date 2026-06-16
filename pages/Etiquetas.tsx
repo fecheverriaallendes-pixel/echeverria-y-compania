@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '../store/GlobalContext';
 import { Sale, SaleType, SaleStatus, CommissionType, StaffRole } from '../types';
 
-const LOGO_URL = "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png";
+const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
 
 // Update Etiqueta.tsx to handle loop over items if present, otherwise single item.
 

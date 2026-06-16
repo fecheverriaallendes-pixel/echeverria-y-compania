@@ -183,7 +183,7 @@ export default function RegistrarVenta() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
         <div>
           <h2 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Terminal de Ventas</h2>
-          <p className="text-slate-500 font-medium italic">Selecciona el flujo operativo Cuaderno MDF</p>
+          <p className="text-slate-500 font-medium italic">Selecciona el flujo operativo Echeverria & Co.</p>
         </div>
         <div className="flex bg-slate-200 p-1.5 rounded-[24px] shadow-inner w-full sm:w-auto">
           <button 

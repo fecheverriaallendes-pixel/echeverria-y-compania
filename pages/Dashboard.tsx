@@ -141,7 +141,7 @@ export default function Dashboard() {
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-full mb-4">
             <LayoutDashboard size={14} /> Sistema Inteligente v2.5
           </div>
-          <h2 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Dashboard <span className="text-emerald-500 italic">MDF</span></h2>
+          <h2 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Dashboard <span className="text-emerald-500 italic">E&C</span></h2>
           <p className="text-slate-500 font-medium italic mt-2">Inteligencia de negocios y control operativo centralizado</p>
         </div>
         

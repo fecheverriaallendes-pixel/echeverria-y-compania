@@ -77,12 +77,12 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
     <>
       {isOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={toggle} />}
       <aside className={`fixed top-0 left-0 z-50 h-screen w-64 bg-slate-900 text-white transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 shadow-2xl flex flex-col no-print`}>
-        <div className="p-8 flex items-center justify-between border-b border-slate-800">
-          <Link to="/" onClick={() => playSound('transition')} className="text-xl font-black tracking-tighter flex items-center gap-2">
-            <span className="bg-emerald-500 p-1 rounded-lg text-white font-black text-xs">MDF</span>
-            CUADERNO <span className="text-emerald-500 italic">MDF</span>
+        <div className="p-5 flex items-center justify-between border-b border-slate-800">
+          <Link to="/" onClick={() => playSound('transition')} className="text-[15px] sm:text-base font-black tracking-tighter flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
+            <span className="bg-emerald-500 px-1.5 py-1 rounded-lg text-white font-black text-[10px]">E&C</span>
+            ECHEVERRIA <span className="text-emerald-500 italic">& CO.</span>
           </Link>
-          <button onClick={toggle} className="lg:hidden p-1 text-slate-400 hover:text-white"><X size={24} /></button>
+          <button onClick={toggle} className="lg:hidden p-1 text-slate-400 hover:text-white flex-shrink-0"><X size={20} /></button>
         </div>
         
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

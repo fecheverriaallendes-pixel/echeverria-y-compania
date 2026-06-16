@@ -1,7 +1,7 @@
 import React from 'react';
 import { Sale } from '../types';
 
-const LOGO_URL = "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png";
+const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
 
 export const Label = ({ sale, stock, item }: { sale: Sale, stock: any[], item?: {codigoFardo: string, cantidad: number} }) => {
   const displayItem = item || { codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 };

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
 
-const LOGO_URL = "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png";
+const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
 
 export default function CatalogoPublico() {
   const { stock } = useStore();

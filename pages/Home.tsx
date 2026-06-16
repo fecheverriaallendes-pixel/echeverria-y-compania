@@ -35,7 +35,7 @@ import {
 import { useStore } from '../store/GlobalContext';
 import { StaffRole } from '../types';
 
-const LOGO_URL = "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png";
+const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
 
 export default function Home() {
   const { staff, stock, currentUser, login, playSound, settings, updateSettings, syncWithCloud, isSyncing } = useStore();
@@ -188,20 +188,16 @@ export default function Home() {
   if (!currentUser) {
     return (
       <div className="fixed inset-0 flex items-center justify-center p-4 animate-gradient overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-red-400/30 blur-[150px] rounded-full animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-400/30 blur-[150px] rounded-full animate-pulse delay-700"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-400/20 blur-[150px] rounded-full animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/20 blur-[150px] rounded-full animate-pulse delay-700"></div>
 
-        <div className="w-full max-w-xl z-10 animate-in fade-in zoom-in duration-1000 flex flex-col items-center">
-          <div className="text-center mb-10 drop-shadow-2xl transition-transform">
-            <img src={LOGO_URL} alt="Logo" className="w-48 sm:w-64 mx-auto mb-6 drop-shadow-2xl" />
-            <h1 className="text-5xl sm:text-6xl font-black text-white tracking-tighter mb-2 uppercase">
-              CUADERNO <span className="text-emerald-400 italic">MDF</span>
-            </h1>
-            <p className="text-white font-black uppercase tracking-[0.6em] text-[9px] opacity-80">PLATAFORMA OPERATIVA MULTIUSUARIO</p>
+        <div className="w-full max-w-lg z-10 animate-in fade-in zoom-in duration-1000 flex flex-col items-center">
+          <div className="text-center -mt-8 sm:-mt-12 md:-mt-16 -mb-6 sm:-mb-10 md:-mb-12 drop-shadow-2xl transition-transform">
+            <img src={LOGO_URL} alt="Logo" className="w-64 sm:w-80 md:w-[360px] mx-auto drop-shadow-2xl" />
           </div>
 
-          <div className="w-full max-w-md bg-white/10 backdrop-blur-3xl p-10 rounded-[56px] shadow-2xl border border-white/20">
-                <form onSubmit={handleLogin} className="space-y-6">
+          <div className="w-full max-w-md bg-white/10 backdrop-blur-3xl p-6 sm:p-8 rounded-[40px] shadow-2xl border border-white/20">
+                <form onSubmit={handleLogin} className="space-y-4">
                   {staff.length === 0 && (
                     <div className="space-y-3">
                         <div className="p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-3xl text-center">
@@ -211,11 +207,11 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] ml-6">PERFIL PROFESIONAL</label>
                     <select 
                       required
-                      className="w-full px-8 py-5 bg-white border-none rounded-[28px] font-black text-slate-900 focus:ring-4 focus:ring-emerald-400/50 outline-none appearance-none transition-all shadow-xl"
+                      className="w-full px-6 py-3.5 bg-white border-none rounded-[22px] font-black text-sm text-slate-900 focus:ring-4 focus:ring-emerald-400/50 outline-none appearance-none transition-all shadow-xl"
                       value={loginForm.user}
                       onChange={(e) => setLoginForm({...loginForm, user: e.target.value})}
                     >
@@ -226,30 +222,30 @@ export default function Home() {
                     </select>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em] ml-6">PIN DE SEGURIDAD</label>
                     <input 
                       required
                       type="password"
                       placeholder="••••"
                       maxLength={4}
-                      className="w-full px-8 py-5 bg-white border-none rounded-[28px] text-center text-4xl font-black tracking-[0.5em] text-slate-900 focus:ring-4 focus:ring-emerald-400/50 outline-none transition-all shadow-xl"
+                      className="w-full px-6 py-3 bg-white border-none rounded-[22px] text-center text-3xl font-black tracking-[0.5em] text-slate-900 focus:ring-4 focus:ring-emerald-400/50 outline-none transition-all shadow-xl"
                       value={loginForm.pin}
                       onChange={(e) => setLoginForm({...loginForm, pin: e.target.value})}
                     />
                   </div>
 
                   {error && (
-                    <div className="p-4 bg-red-600/90 text-white rounded-[24px] text-[10px] font-black text-center flex items-center justify-center gap-3 animate-shake">
+                    <div className="p-3 bg-red-600/90 text-white rounded-[20px] text-[10px] font-black text-center flex items-center justify-center gap-3 animate-shake">
                       <Lock size={14} /> PIN INCORRECTO
                     </div>
                   )}
 
                   <button 
                     type="submit" disabled={loading || isSyncing}
-                    className="w-full py-6 bg-slate-900 text-white rounded-[28px] font-black text-xl flex items-center justify-center gap-4 hover:bg-black transition-all shadow-2xl disabled:opacity-50"
+                    className="w-full py-4 bg-slate-900 text-white rounded-[22px] font-black text-lg flex items-center justify-center gap-4 hover:bg-black transition-all shadow-2xl disabled:opacity-50"
                   >
-                    {loading ? <RefreshCw className="animate-spin" /> : <LogIn size={24} />} 
+                    {loading ? <RefreshCw className="animate-spin" /> : <LogIn size={20} />} 
                     {loading ? 'VALIDANDO...' : 'ENTRAR AL SISTEMA'}
                   </button>
                 </form>
@@ -262,17 +258,26 @@ export default function Home() {
   const canSeeCatalogue = currentUser.rol === StaffRole.ADMIN || currentUser.rol === StaffRole.VENDEDOR;
 
   return (
-    <div className="min-h-full flex flex-col items-center justify-center py-10 px-4">
-      <div className="text-center mb-12">
-        <img src={LOGO_URL} alt="Logo" className="w-24 mx-auto mb-6 drop-shadow-2xl" />
-        <h1 className="text-5xl font-black text-slate-900 tracking-tighter mb-2 uppercase">
-          BIENVENIDO AL <span className="text-emerald-500 italic">MDF</span>
+    <div className="relative min-h-full flex flex-col items-center justify-center py-12 px-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-[40px] overflow-hidden shadow-lg border border-slate-800">
+      {/* Modern dotted/grid texture pattern overlay */}
+      <div 
+        className="absolute inset-0 opacity-40 pointer-events-none z-0" 
+        style={{ 
+          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.12) 1.5px, transparent 1.5px)', 
+          backgroundSize: '24px 24px' 
+        }}
+      />
+
+      <div className="text-center mb-10 animate-in fade-in zoom-in duration-700 z-10 relative">
+        <img src={LOGO_URL} alt="Logo" className="w-[320px] sm:w-[460px] md:w-[500px] mx-auto mb-1.5 drop-shadow-2xl" />
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-wide mb-2 uppercase">
+          BIENVENIDO A <span className="text-emerald-400 italic">ECHEVERRIA & CO.</span>
         </h1>
-        <p className="text-slate-400 font-bold uppercase tracking-[0.4em] text-[10px] mb-8">Central de Inteligencia Logística</p>
+        <p className="text-slate-300 font-bold uppercase tracking-[0.4em] text-[10px] mb-8">Central de Inteligencia Logística</p>
         
-        <div className="inline-flex items-center gap-3 px-6 py-2 bg-white rounded-full shadow-sm border border-slate-100 mb-8">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+        <div className="inline-flex items-center gap-3 px-6 py-2 bg-emerald-950/40 border border-emerald-500/30 rounded-full shadow-lg mb-2 backdrop-blur-sm">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>
+          <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
             {currentUser.nombre} • Firebase Activo
           </span>
         </div>
@@ -280,10 +285,10 @@ export default function Home() {
 
       {/* SECCIÓN CATÁLOGO RÁPIDO PARA VENDEDORES */}
       {canSeeCatalogue && (
-        <div className="w-full max-w-6xl mb-12 animate-in slide-in-from-top duration-700">
+        <div className="w-full max-w-6xl mb-12 animate-in slide-in-from-top duration-700 z-10 relative">
            <div className="flex items-center gap-4 mb-6">
-              <BookOpen size={24} className="text-emerald-500" />
-              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">Módulo de Catálogo Maestro</h2>
+              <BookOpen size={24} className="text-emerald-400" />
+              <h2 className="text-xl font-black text-white uppercase tracking-tighter">Módulo de Catálogo Maestro</h2>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <button 
@@ -300,7 +305,7 @@ export default function Home() {
 
               <button 
                 onClick={() => { playSound('transition'); navigate('/catalogo?mode=print'); }}
-                className="group flex items-center justify-between p-8 bg-slate-900 rounded-[40px] text-white shadow-xl hover:bg-black transition-all hover:scale-[1.02] active:scale-95 text-left"
+                className="group flex items-center justify-between p-8 bg-slate-950 border border-slate-800 rounded-[40px] text-white shadow-xl hover:bg-black transition-all hover:scale-[1.02] active:scale-95 text-left"
               >
                 <div>
                   <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-4"><List size={24} /></div>
@@ -308,22 +313,22 @@ export default function Home() {
                   <p className="text-slate-400 text-[10px] font-bold uppercase italic mt-1 tracking-widest">Formato Impreso (Líneas)</p>
                 </div>
                 <ChevronRight size={32} className="opacity-50 group-hover:opacity-100 transition-opacity" />
-            </button>
+              </button>
            </div>
         </div>
       )}
 
       {/* SECCIÓN DE PRODUCTOS EN PROMOCIÓN PARA VENDEDORES */}
       {canSeeCatalogue && (
-         <div className="w-full max-w-6xl mb-12 animate-in slide-in-from-top duration-700 delay-100">
+         <div className="w-full max-w-6xl mb-12 animate-in slide-in-from-top duration-700 delay-100 z-10 relative">
             <div className="flex items-center justify-between mb-6">
                <div className="flex items-center gap-4">
-                  <div className="p-2.5 bg-rose-50 text-rose-500 rounded-2xl animate-pulse">
+                  <div className="p-2.5 bg-rose-500/15 text-rose-400 rounded-2xl animate-pulse">
                      <Flame size={24} />
                   </div>
                   <div>
-                     <h2 className="text-xl font-black text-slate-900 uppercase tracking-tighter">🔥 Productos en Promoción 🔥</h2>
-                     <p className="text-xs text-rose-500 font-extrabold uppercase mt-0.5 tracking-wider">¡Comisión de venta especial de $1.500!</p>
+                     <h2 className="text-xl font-black text-white uppercase tracking-tighter">🔥 Productos en Promoción 🔥</h2>
+                     <p className="text-xs text-rose-450 font-extrabold uppercase mt-0.5 tracking-wider">¡Comisión de venta especial de $1.500!</p>
                   </div>
                </div>
                
@@ -336,13 +341,13 @@ export default function Home() {
                const promoItems = (stock || []).filter(item => item.promocion && item.stockActual > 0);
                if (promoItems.length === 0) {
                   return (
-                     <div className="bg-white p-10 rounded-[36px] border border-slate-100 shadow-xl text-center space-y-3 relative overflow-hidden">
+                     <div className="bg-slate-950/40 backdrop-blur-md p-10 rounded-[36px] border border-slate-800 text-center space-y-3 relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-2 h-full bg-rose-500"></div>
-                        <div className="w-14 h-14 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                        <div className="w-14 h-14 bg-slate-900 text-slate-500 rounded-full flex items-center justify-center mx-auto">
                            <Tag size={24} />
                         </div>
-                        <p className="font-extrabold text-slate-800 text-base uppercase tracking-tight">Sin Ofertas Activas</p>
-                        <p className="text-slate-400 text-xs font-medium max-w-md mx-auto leading-relaxed">No hay fardos etiquetados en promoción actualmente. Los administradores pueden marcar promociones directamente en la pestaña de <b className="text-slate-600">Bodega y Stock</b>.</p>
+                        <p className="font-extrabold text-slate-200 text-base uppercase tracking-tight">Sin Ofertas Activas</p>
+                        <p className="text-slate-400 text-xs font-medium max-w-md mx-auto leading-relaxed">No hay fardos etiquetados en promoción actualmente. Los administradores pueden marcar promociones directamente en la pestaña de <b className="text-slate-300">Bodega y Stock</b>.</p>
                      </div>
                   );
                }
@@ -435,7 +440,7 @@ export default function Home() {
          </div>
       )}
 
-      <div className="w-full max-w-6xl animate-in fade-in slide-in-from-bottom duration-1000">
+      <div className="w-full max-w-6xl animate-in fade-in slide-in-from-bottom duration-1000 z-10 relative">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {menuOptions
             .filter(opt => opt.roles.includes(currentUser.rol))

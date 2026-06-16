@@ -1,6 +1,6 @@
 {
-  "name": "Cuaderno MDF",
-  "short_name": "Cuaderno MDF",
+  "name": "Echeverria & Co",
+  "short_name": "Echeverria & Co",
   "description": "Sistema de Gestión y Control de Inventarios/Fardos",
   "start_url": "/",
   "id": "/",
@@ -10,25 +10,25 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png",
+      "src": "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png",
+      "src": "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png",
+      "src": "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "https://i.ibb.co/qMyZQHYg/logo-sin-fondo-1.png",
+      "src": "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
