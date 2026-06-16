@@ -290,11 +290,11 @@ export default function PostVenta() {
       // Elegant typographic fallback logo
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(14);
-      doc.setTextColor(220, 38, 38);
-      doc.text("EMF", 50, 20, { align: 'center' });
+      doc.setTextColor(16, 185, 129);
+      doc.text("E&C", 50, 20, { align: 'center' });
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text("EL MUNDO DEL FARDO", 50, 25, { align: 'center' });
+      doc.text("ECHEVERRIA & CO.", 50, 25, { align: 'center' });
     }
 
     doc.setFont("Helvetica", "bold");
@@ -388,7 +388,7 @@ export default function PostVenta() {
     doc.setFont("Helvetica", "bolditalic");
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184); // slate-400
-    doc.text(`¡Gracias por preferir El Mundo del Fardo!`, 50, 135, { align: 'center' });
+    doc.text(`¡Gracias por preferir Echeverria & Co.!`, 50, 135, { align: 'center' });
 
     doc.save(`cupon_${coupon.code}.pdf`);
   };
@@ -681,7 +681,7 @@ export default function PostVenta() {
                     }}
                   />
                   <div>
-                    <h3 className="font-black text-slate-800 tracking-tight text-sm">EL MUNDO DEL FARDO</h3>
+                    <h3 className="font-black text-slate-800 tracking-tight text-sm">ECHEVERRIA & CO.</h3>
                     <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Post-Venta Compensaciones</p>
                   </div>
                 </div>

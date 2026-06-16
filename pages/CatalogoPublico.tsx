@@ -51,7 +51,7 @@ export default function CatalogoPublico() {
           <div className="flex items-center gap-3">
             <img src={LOGO_URL} alt="Logo" className="w-10 h-10" />
             <div>
-              <h1 className="text-xl font-black text-slate-900 tracking-tighter uppercase leading-none">CATÁLOGO MDF</h1>
+              <h1 className="text-[17px] sm:text-xl font-black text-slate-900 tracking-tighter uppercase leading-none">CATÁLOGO ECHEVERRIA & CO.</h1>
               <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-1">Stock en Tiempo Real</p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export default function CatalogoPublico() {
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-100 py-10 px-6 text-center">
-        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">CUADERNO MDF • CHILE</p>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">ECHEVERRIA & CO. • CHILE</p>
         <div className="flex items-center justify-center gap-4 text-slate-400">
           <AlertCircle size={16} />
           <p className="text-[9px] font-bold uppercase italic">Los precios y stock pueden variar sin previo aviso</p>

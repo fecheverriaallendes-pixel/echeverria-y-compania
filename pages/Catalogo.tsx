@@ -153,7 +153,7 @@ export default function Catalogo() {
           pdf.setTextColor(255, 255, 255);
           pdf.setFontSize(20);
           pdf.setFont('helvetica', 'bold');
-          pdf.text('CUADERNO MDF S.A.', 14, 18);
+          pdf.text('ECHEVERRIA & CO.', 14, 18);
           
           pdf.setFontSize(9);
           pdf.setFont('helvetica', 'normal');
@@ -219,7 +219,7 @@ export default function Catalogo() {
                 pdf.rect(0, 0, 210, 15, 'F');
                 pdf.setTextColor(255, 255, 255);
                 pdf.setFontSize(10);
-                pdf.text('CUADERNO MDF S.A. - LISTA DE PRECIOS', 14, 10);
+                pdf.text('ECHEVERRIA & CO. - LISTA DE PRECIOS', 14, 10);
               }
 
               // Footer info
@@ -227,11 +227,11 @@ export default function Catalogo() {
               pdf.setTextColor(148, 163, 184);
               const pageNum = pdf.getNumberOfPages();
               pdf.text(`Página ${pageNum}`, 14, pdf.internal.pageSize.getHeight() - 8);
-              pdf.text('Precios sujetos a cambio sin previo aviso • CUADERNO MDF CHILE', 105, pdf.internal.pageSize.getHeight() - 8, { align: 'center' });
+              pdf.text('Precios sujetos a cambio sin previo aviso • ECHEVERRIA & CO.', 105, pdf.internal.pageSize.getHeight() - 8, { align: 'center' });
             }
           });
 
-          pdf.save(`Lista_Precios_MDF_${new Date().toISOString().slice(0, 10)}.pdf`);
+          pdf.save(`Lista_Precios_Echeverria_${new Date().toISOString().slice(0, 10)}.pdf`);
         } else {
           // MODE: DIGITAL (Canvas screenshot)
           const input = contentRef.current;
@@ -386,7 +386,7 @@ export default function Catalogo() {
           <div className="flex items-center gap-4">
             <img src={LOGO_URL} alt="Logo" className="w-12 h-12 grayscale contrast-150" />
             <div>
-                <h1 className="text-xl font-black uppercase tracking-tighter">CUADERNO MDF S.A.</h1>
+                <h1 className="text-xl font-black uppercase tracking-tighter">ECHEVERRIA & CO.</h1>
                 <p className="text-xs font-bold text-slate-500">{viewMode === 'digital' ? 'Catálogo Maestro' : 'Lista Oficial de Precios'}</p>
             </div>
           </div>
@@ -447,7 +447,7 @@ export default function Catalogo() {
 
         <div className="mt-12 text-center border-t border-slate-100 pt-8 print:mt-6 print:border-slate-900">
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] print:text-[8px] print:text-slate-900">
-             INTELIGENCIA OPERATIVA EN FARDOS • CUADERNO MDF
+             INTELIGENCIA OPERATIVA EN FARDOS • ECHEVERRIA & CO.
            </p>
         </div>
       </div>

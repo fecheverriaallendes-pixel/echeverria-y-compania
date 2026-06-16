@@ -372,7 +372,7 @@ export default function Dashboard() {
             <Zap size={16} /> Alta Disponibilidad
           </div>
           <h3 className="text-5xl font-black uppercase tracking-tighter leading-none">Aumenta tu Margen <br/>con Estrategia</h3>
-          <p className="text-white/80 font-medium max-w-lg text-xl italic leading-relaxed">El sistema MDF ha detectado que los fardos de "Polerones Premium" tienen el mejor retorno de inversión este mes.</p>
+          <p className="text-white/80 font-medium max-w-lg text-xl italic leading-relaxed">Nuestro sistema ha detectado que los fardos de "Polerones Premium" tienen el mejor retorno de inversión este mes.</p>
         </div>
         <div className="flex flex-col gap-4 relative z-10">
           <Link 
