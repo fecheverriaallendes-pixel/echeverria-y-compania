@@ -131,7 +131,7 @@ export default function Home() {
     },
     { 
       name: 'Crear Producto', 
-      desc: 'Añadir nuevo fardo o pieza al stock', 
+      desc: 'Añadir nuevo producto o artículo al stock', 
       icon: PackagePlus, 
       path: '/stock?action=add',
       color: 'bg-emerald-600',
@@ -347,7 +347,7 @@ export default function Home() {
                            <Tag size={24} />
                         </div>
                         <p className="font-extrabold text-slate-200 text-base uppercase tracking-tight">Sin Ofertas Activas</p>
-                        <p className="text-slate-400 text-xs font-medium max-w-md mx-auto leading-relaxed">No hay fardos etiquetados en promoción actualmente. Los administradores pueden marcar promociones directamente en la pestaña de <b className="text-slate-300">Bodega y Stock</b>.</p>
+                        <p className="text-slate-400 text-xs font-medium max-w-md mx-auto leading-relaxed">No hay productos etiquetados en promoción actualmente. Los administradores pueden marcar promociones directamente en la pestaña de <b className="text-slate-300">Bodega y Stock</b>.</p>
                      </div>
                   );
                }
@@ -357,7 +357,7 @@ export default function Home() {
                      {promoItems.map((item) => {
                         const lowStock = item.stockActual <= 3;
                         const outOfStock = item.stockActual === 0;
-                        const promoMessage = `🔥 ¡SUPER PROMOCIÓN! Fardo de "${item.tipo.toUpperCase()}" (${item.unidad}) código: *${item.codigo}* por sólo *$${item.precioSugerido?.toLocaleString('es-CL')}* CLP. ¡Aprovecha ya antes que se agote! 🚚💨 Quedan pocas unidades en nuestra bodega central. Contáctanos de inmediato.`;
+                        const promoMessage = `🔥 ¡SUPER PROMOCIÓN! "${item.tipo.toUpperCase()}" (${item.unidad}) código: *${item.codigo}* por sólo *$${item.precioSugerido?.toLocaleString('es-CL')}* CLP. ¡Aprovecha ya antes que se agote! 🚚💨 Quedan pocas unidades en nuestra bodega central. Contáctanos de inmediato.`;
 
                         const handleCopyMessage = () => {
                            navigator.clipboard.writeText(promoMessage);
@@ -393,7 +393,7 @@ export default function Home() {
                                     <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight leading-tight line-clamp-2">
                                        {item.tipo}
                                     </h3>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{item.categoria || 'FARDO'} • {item.unidad}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{item.categoria || 'PRODUCTO'} • {item.unidad}</p>
                                  </div>
                               </div>
 

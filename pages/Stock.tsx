@@ -257,7 +257,7 @@ export default function Stock() {
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8">
         <div>
           <h2 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Inventario Central</h2>
-          <p className="text-slate-500 font-medium italic mt-2">Control maestro de Fardos y Piezas Unitarias</p>
+          <p className="text-slate-500 font-medium italic mt-2">Control maestro de Productos y Piezas Unitarias</p>
         </div>
         {canModify && (
           <div className="flex flex-wrap gap-4">
@@ -296,7 +296,7 @@ export default function Stock() {
                   categoryFilter === cat ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                {cat === 'TODOS' ? 'Todos' : cat === 'FARDO' ? 'Fardos' : cat === 'LOTE' ? 'Lotes' : '⚠️ Negativos'}
+                {cat === 'TODOS' ? 'Todos' : cat === 'FARDO' ? 'Unidades' : cat === 'LOTE' ? 'Lotes' : '⚠️ Negativos'}
               </button>
             ))}
           </div>
@@ -464,7 +464,7 @@ export default function Stock() {
                       onClick={() => setNewBale({...newBale, categoria: 'FARDO', unidad: 'FARDO'})}
                       className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${newBale.categoria === 'FARDO' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}
                     >
-                      <Layers size={20} /> Fardo
+                      <Layers size={20} /> Estándar
                     </button>
                     <button 
                       type="button"
@@ -559,7 +559,7 @@ export default function Stock() {
             <div className="p-12 bg-blue-600 text-white flex items-center justify-between">
               <div>
                 <p className="text-white/80 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Control de Inventario</p>
-                <h3 className="text-4xl font-black uppercase tracking-tighter italic">Editar Fardo/Pieza</h3>
+                <h3 className="text-4xl font-black uppercase tracking-tighter italic">Editar Producto</h3>
               </div>
               <button onClick={() => setEditingItem(null)} className="p-4 hover:bg-white/10 rounded-full transition-colors"><X size={36} /></button>
             </div>
@@ -573,7 +573,7 @@ export default function Stock() {
                       onClick={() => setEditingItem({...editingItem, categoria: 'FARDO'})}
                       className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${editingItem.categoria === 'FARDO' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500'}`}
                     >
-                      <Layers size={20} /> Fardo
+                      <Layers size={20} /> Estándar
                     </button>
                     <button 
                       type="button"
@@ -666,7 +666,7 @@ export default function Stock() {
               <AlertTriangle size={56} />
             </div>
             <h3 className="text-3xl font-black text-slate-900 mb-4 uppercase tracking-tighter">¿Eliminar Item?</h3>
-            <p className="text-slate-500 font-medium mb-10 leading-relaxed italic">Esta operación purgará el fardo/pieza de la base de datos centralizada. <br/>¿Estás seguro de continuar?</p>
+            <p className="text-slate-500 font-medium mb-10 leading-relaxed italic">Esta operación purgará el artículo/pieza de la base de datos centralizada. <br/>¿Estás seguro de continuar?</p>
             <div className="flex gap-4">
               <button onClick={() => setDeletingId(null)} className="flex-1 py-5 bg-slate-100 text-slate-900 rounded-[24px] font-black uppercase text-xs tracking-widest">Abortar</button>
               <button onClick={handleDelete} className="flex-1 py-5 bg-red-600 text-white rounded-[24px] font-black shadow-2xl shadow-red-600/30 uppercase text-xs tracking-widest">Confirmar Purga</button>

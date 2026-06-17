@@ -336,7 +336,7 @@ export default function Comisiones() {
           <div className="space-y-4">
             <p className="text-amber-400 text-xs font-black uppercase tracking-[0.4em]">Total a Desembolsar este Sábado</p>
             <h3 className="text-7xl font-black tracking-tighter leading-none">${(totalCommissionsToPay || 0).toLocaleString()} <span className="text-2xl text-slate-400">CLP</span></h3>
-            <p className="text-slate-400 font-bold italic">Basado en {weeklySales.length} fardos/unidades procesadas.</p>
+            <p className="text-slate-400 font-bold italic">Basado en {weeklySales.length} unidades procesadas.</p>
           </div>
           <div className="flex gap-4">
              <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] backdrop-blur-md">

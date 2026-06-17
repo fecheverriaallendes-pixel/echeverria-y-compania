@@ -87,7 +87,7 @@ export default function CatalogoPublico() {
                     : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {filter === 'TODOS' ? 'Todo' : filter === 'FARDO' ? 'Fardos' : 'Lotes'}
+                {filter === 'TODOS' ? 'Todo' : filter === 'FARDO' ? 'Unidades' : 'Lotes'}
               </button>
             ))}
           </div>

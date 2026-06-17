@@ -16,7 +16,7 @@ export default function Produccion() {
     }
     addProductionRecord(cant);
     setCantidad('');
-    alert(`Guardado: ${cant} fardos.`);
+    alert(`Guardado: ${cant} unidades.`);
   };
 
   // Weekly stats
@@ -40,7 +40,7 @@ export default function Produccion() {
   return (
     <div className="p-8 max-w-4xl mx-auto">
       <h1 className="text-4xl font-black text-slate-800 mb-8 uppercase flex items-center gap-3">
-        <Factory className="text-amber-500" /> Producción (Reenfardado)
+        <Factory className="text-amber-500" /> Producción (Reempaque / Preparación)
       </h1>
 
       <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 mb-8">
@@ -50,7 +50,7 @@ export default function Produccion() {
                 type="number"
                 value={cantidad}
                 onChange={(e) => setCantidad(e.target.value)}
-                placeholder="Cantidad de Fardos"
+                placeholder="Cantidad de Unidades"
                 className="px-6 py-4 rounded-2xl border-2 border-slate-200 outline-none focus:border-amber-500 w-64 text-xl font-bold"
             />
             <button 
@@ -73,7 +73,7 @@ export default function Produccion() {
         
         <div className="grid grid-cols-2 gap-8 mb-8">
             <div className="bg-slate-50 p-6 rounded-2xl">
-                <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Total Fardos</p>
+                <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Total Unidades</p>
                 <p className="text-4xl font-black text-slate-800">{totalFardos}</p>
             </div>
             <div className="bg-emerald-50 p-6 rounded-2xl">

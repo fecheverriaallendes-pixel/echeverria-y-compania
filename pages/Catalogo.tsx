@@ -343,7 +343,7 @@ export default function Catalogo() {
                   categoryFilter === cat ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
                 }`}
               >
-                {cat === 'TODOS' ? 'Todos' : cat === 'FARDO' ? 'Fardos' : 'Lotes'}
+                {cat === 'TODOS' ? 'Todos' : cat === 'FARDO' ? 'Unidades' : 'Lotes'}
               </button>
             ))}
           </div>
@@ -447,7 +447,7 @@ export default function Catalogo() {
 
         <div className="mt-12 text-center border-t border-slate-100 pt-8 print:mt-6 print:border-slate-900">
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em] print:text-[8px] print:text-slate-900">
-             INTELIGENCIA OPERATIVA EN FARDOS • ECHEVERRIA & CO.
+             SISTEMA DE INTELIGENCIA OPERATIVA • ECHEVERRIA & CO.
            </p>
         </div>
       </div>

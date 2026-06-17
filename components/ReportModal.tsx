@@ -76,7 +76,7 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
             <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 text-center">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resumen Unidades</p>
               <p className="text-xl font-black text-slate-900 uppercase">
-                📦 Fardos: <span className="text-blue-600">{totalFardos}</span> | 🏷️ Lotes: <span className="text-amber-600">{totalLotes}</span>
+                📦 Unidades: <span className="text-blue-600">{totalFardos}</span> | 🏷️ Lotes: <span className="text-amber-600">{totalLotes}</span>
               </p>
             </div>
           </div>
@@ -97,7 +97,7 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
                   <td className="p-4 font-black">{vend}</td>
                   <td className="p-4">
                     {data.fardos + data.lotes}
-                    <div className="text-[10px] text-slate-400">F:{data.fardos} L:{data.lotes}</div>
+                    <div className="text-[10px] text-slate-400">U:{data.fardos} L:{data.lotes}</div>
                   </td>
                   <td className="p-4 text-blue-700 bg-blue-50">{data.cantNormal}</td>
                   <td className="p-4 text-red-700 bg-red-50">{data.cantPromo}</td>

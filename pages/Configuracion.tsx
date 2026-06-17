@@ -365,7 +365,7 @@ export default function Configuracion() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { label: 'Ventas', count: sales.length, icon: FileText, color: 'blue' },
-                    { label: 'Fardos', count: stock.length, icon: Package, color: 'emerald' },
+                    { label: 'Productos', count: stock.length, icon: Package, color: 'emerald' },
                     { label: 'Personal', count: staff.length, icon: Users, color: 'purple' },
                     { label: 'Compras', count: purchases.length, icon: Wallet, color: 'amber' }
                   ].map(stat => (

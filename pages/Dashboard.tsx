@@ -215,7 +215,7 @@ export default function Dashboard() {
           value={`$${stats.valorInventarioVenta.toLocaleString()}`} 
           icon={Package} 
           color="amber" 
-          subtitle={`${stats.disponibles} fardos en stock`}
+          subtitle={`${stats.disponibles} artículos en stock`}
         />
         <StatCard 
           title="Eficiencia TikTok" 
@@ -303,7 +303,7 @@ export default function Dashboard() {
               <AlertCircle className="text-rose-500 animate-pulse" size={24} /> Pendientes por Vendedor
             </h3>
             <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
-              Ventas con datos incompletos, fardos de fardos sin etiquetar o pagos pendientes de confirmar
+              Ventas con datos incompletos, productos sin etiquetar o pagos pendientes de confirmar
             </p>
           </div>
           <span className="px-4 py-2 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0 self-start md:self-auto font-sans">
@@ -372,7 +372,7 @@ export default function Dashboard() {
             <Zap size={16} /> Alta Disponibilidad
           </div>
           <h3 className="text-5xl font-black uppercase tracking-tighter leading-none">Aumenta tu Margen <br/>con Estrategia</h3>
-          <p className="text-white/80 font-medium max-w-lg text-xl italic leading-relaxed">Nuestro sistema ha detectado que los fardos de "Polerones Premium" tienen el mejor retorno de inversión este mes.</p>
+          <p className="text-white/80 font-medium max-w-lg text-xl italic leading-relaxed">Nuestro sistema ha detectado que la línea de "Polerones Premium" tiene el mejor retorno de inversión este mes.</p>
         </div>
         <div className="flex flex-col gap-4 relative z-10">
           <Link 

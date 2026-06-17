@@ -121,11 +121,11 @@ export default function RegistrarVenta() {
         const foundStockItem = stock.find(s => s.codigo === item.codigoFardo.trim().toUpperCase());
         if (foundStockItem) {
           if (foundStockItem.stockActual <= 0) {
-            alert(`⚠️ Error: El fardo ${foundStockItem.codigo} está agotado (Stock actual: ${foundStockItem.stockActual}). No se puede registrar la venta.`);
+            alert(`⚠️ Error: El producto ${foundStockItem.codigo} está agotado (Stock actual: ${foundStockItem.stockActual}). No se puede registrar la venta.`);
             return;
           }
           if (foundStockItem.stockActual < item.cantidad) {
-            alert(`⚠️ Error: El fardo ${foundStockItem.codigo} no tiene stock suficiente (Stock actual: ${foundStockItem.stockActual}, Solicitado: ${item.cantidad}). No se puede registrar la venta.`);
+            alert(`⚠️ Error: El producto ${foundStockItem.codigo} no tiene stock suficiente (Stock actual: ${foundStockItem.stockActual}, Solicitado: ${item.cantidad}). No se puede registrar la venta.`);
             return;
           }
         }
@@ -134,11 +134,11 @@ export default function RegistrarVenta() {
       const selectedStockItem = formData.codigoFardo ? stock.find(s => s.codigo === formData.codigoFardo.trim().toUpperCase()) : null;
       if (selectedStockItem) {
         if (selectedStockItem.stockActual <= 0) {
-          alert(`⚠️ Error: El fardo ${selectedStockItem.codigo} está agotado (Stock actual: ${selectedStockItem.stockActual}). No se puede registrar la venta.`);
+          alert(`⚠️ Error: El producto ${selectedStockItem.codigo} está agotado (Stock actual: ${selectedStockItem.stockActual}). No se puede registrar la venta.`);
           return;
         }
         if (selectedStockItem.stockActual < (formData.cantidad || 1)) {
-          alert(`⚠️ Error: El fardo ${selectedStockItem.codigo} no tiene stock suficiente (Stock actual: ${selectedStockItem.stockActual}, Solicitado: ${formData.cantidad || 1}). No se puede registrar la venta.`);
+          alert(`⚠️ Error: El producto ${selectedStockItem.codigo} no tiene stock suficiente (Stock actual: ${selectedStockItem.stockActual}, Solicitado: ${formData.cantidad || 1}). No se puede registrar la venta.`);
           return;
         }
       }
@@ -165,7 +165,7 @@ export default function RegistrarVenta() {
     
     setFormData({
       cliente: '', vendedor: formData.vendedor, telefono: '', rut: '',
-      codigoFardo: '', esManual: true, variante: isQuick ? '' : 'Fardo', valorUnitario: 0, cantidad: 1,
+      codigoFardo: '', esManual: true, variante: isQuick ? '' : 'Estándar', valorUnitario: 0, cantidad: 1,
       direccion: '', estadoPago: 'Pendiente', tipoComision: CommissionType.FARDO_NORMAL,
       juntaCompra: 'DESPACHO INMEDIATO', observaciones: '', tipoDespacho: undefined
     });
@@ -271,7 +271,7 @@ export default function RegistrarVenta() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              <div className="relative">
-              <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-4"><Package size={18} className="text-blue-500" /> {mode === 'NOTA_VENTA' ? 'Agregar Producto' : 'Código de Fardo'}</label>
+              <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-4"><Package size={18} className="text-blue-500" /> {mode === 'NOTA_VENTA' ? 'Agregar Producto' : 'Código de Producto'}</label>
               
               {mode === 'NOTA_VENTA' ? (
                 <div>
@@ -290,11 +290,11 @@ export default function RegistrarVenta() {
                               const foundStockItem = stock.find(s => s.codigo === newItem.codigoFardo.trim().toUpperCase());
                               if (foundStockItem) {
                                   if (foundStockItem.stockActual <= 0) {
-                                      alert(`⚠️ Error: El fardo ${foundStockItem.codigo} está agotado (Stock actual: ${foundStockItem.stockActual}). No se puede agregar.`);
+                                      alert(`⚠️ Error: El producto ${foundStockItem.codigo} está agotado (Stock actual: ${foundStockItem.stockActual}). No se puede agregar.`);
                                       return;
                                   }
                                   if (foundStockItem.stockActual < newItem.cantidad) {
-                                      alert(`⚠️ Error: El fardo ${foundStockItem.codigo} no tiene stock suficiente (Stock actual: ${foundStockItem.stockActual}, Solicitado: ${newItem.cantidad}). No se puede agregar.`);
+                                      alert(`⚠️ Error: El producto ${foundStockItem.codigo} no tiene stock suficiente (Stock actual: ${foundStockItem.stockActual}, Solicitado: ${newItem.cantidad}). No se puede agregar.`);
                                       return;
                                   }
                               }
@@ -324,7 +324,7 @@ export default function RegistrarVenta() {
               ) : (
                 <div>
                   <div className="flex gap-2">
-                      <input required list="stock-suggestions" type="text" className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-2xl font-black focus:border-blue-500 outline-none transition-all uppercase" placeholder="F-XXX" value={formData.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, false)}/>
+                      <input required list="stock-suggestions" type="text" className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-2xl font-black focus:border-blue-500 outline-none transition-all uppercase" placeholder="CÓDIGO (Ej: EC-001)" value={formData.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, false)}/>
                       <input required type="number" className="w-32 px-4 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-xl font-black outline-none transition-all" placeholder="VALOR" value={formData.valorUnitario || ''} onChange={(e) => setFormData({...formData, valorUnitario: Number(e.target.value)})}/>
                   </div>
                   {selectedStockItem && (
