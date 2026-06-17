@@ -412,7 +412,7 @@ const INITIAL_MASTER_STOCK: Omit<StockItem, 'id' | 'disponible'>[] = [
 
 interface StoreContextType {
   currentUser: { nombre: string; rol: StaffRole } | null;
-  settings: { soundEnabled: boolean; cloudUrl: string; lastSync: string | null; dbConnected: boolean; lastError: string | null };
+  settings: { soundEnabled: boolean; soundType?: 'classic' | 'retro' | 'melodic' | 'sci-fi'; cloudUrl: string; lastSync: string | null; dbConnected: boolean; lastError: string | null };
   updateSettings: (newSettings: any) => void;
   playSound: (type: 'click' | 'success' | 'transition') => void;
   login: (nombre: string, rol: StaffRole) => void;
@@ -528,7 +528,11 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [settings, setSettings] = useState(() => {
     const saved = safeLocalStorage.getItem('mdf_settings');
-    return saved ? JSON.parse(saved) : { soundEnabled: true, cloudUrl: '', lastSync: null, dbConnected: false, lastError: null };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { soundType: 'classic', ...parsed };
+    }
+    return { soundEnabled: true, soundType: 'classic', cloudUrl: '', lastSync: null, dbConnected: false, lastError: null };
   });
 
   const [sales, setSales] = useState<Sale[]>(() => {
@@ -602,22 +606,131 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     try {
       const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
+      const soundStyle = settings.soundType || 'classic';
       const now = ctx.currentTime;
-      if (type === 'click') {
-        osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
-        gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.1);
-      } else if (type === 'success') {
-        osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.1);
-        gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.3);
-      } else if (type === 'transition') {
-        osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
-        gain.gain.setValueAtTime(0.05, now); osc.start(now); osc.stop(now + 0.15);
+
+      if (soundStyle === 'retro') {
+        if (type === 'click') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(600, now);
+          osc.frequency.setValueAtTime(150, now + 0.05);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'success') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(987.77, now); // B5
+          osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+          gain.gain.setValueAtTime(0.06, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+          osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'transition') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.setValueAtTime(450, now + 0.04);
+          osc.frequency.setValueAtTime(600, now + 0.08);
+          gain.gain.setValueAtTime(0.04, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now); osc.stop(now + 0.15);
+        }
+      } else if (soundStyle === 'melodic') {
+        if (type === 'click') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(440, now); // A4
+          gain.gain.setValueAtTime(0.01, now);
+          gain.gain.linearRampToValueAtTime(0.08, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+          osc.start(now); osc.stop(now + 0.12);
+        } else if (type === 'success') {
+          const playNote = (freq: number, startOffset: number, duration: number) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(freq, now + startOffset);
+            gain.gain.setValueAtTime(0.01, now + startOffset);
+            gain.gain.linearRampToValueAtTime(0.06, now + startOffset + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + startOffset + duration);
+            osc.start(now + startOffset);
+            osc.stop(now + startOffset + duration);
+          };
+          playNote(523.25, 0, 0.4);       // C5
+          playNote(659.25, 0.06, 0.35);    // E5
+          playNote(784.00, 0.12, 0.3);     // G5
+          playNote(1046.50, 0.18, 0.35);   // C6
+        } else if (type === 'transition') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(329.63, now); // E4
+          osc.frequency.exponentialRampToValueAtTime(493.88, now + 0.18); // B4
+          gain.gain.setValueAtTime(0.04, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.start(now); osc.stop(now + 0.2);
+        }
+      } else if (soundStyle === 'sci-fi') {
+        if (type === 'click') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(1200, now);
+          osc.frequency.exponentialRampToValueAtTime(100, now + 0.08);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'success') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(200, now);
+          osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+          osc.frequency.exponentialRampToValueAtTime(800, now + 0.3);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'transition') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.connect(gain); gain.connect(ctx.destination);
+          osc.frequency.setValueAtTime(100, now);
+          osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+          gain.gain.setValueAtTime(0.03, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.start(now); osc.stop(now + 0.15);
+        }
+      } else {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        if (type === 'click') {
+          osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+          gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.1);
+        } else if (type === 'success') {
+          osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.1);
+          gain.gain.setValueAtTime(0.1, now); osc.start(now); osc.stop(now + 0.3);
+        } else if (type === 'transition') {
+          osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+          gain.gain.setValueAtTime(0.05, now); osc.start(now); osc.stop(now + 0.15);
+        }
       }
     } catch (e) {}
-  }, [settings.soundEnabled]);
+  }, [settings.soundEnabled, settings.soundType]);
 
   const pushToCloud = async (curSales: Sale[], curStock: StockItem[], curStaff: StaffMember[], curPurchases: Purchase[], curCarriers?: string[], curAdjustments?: CommissionAdjustment[]) => {
     setIsSyncing(true);

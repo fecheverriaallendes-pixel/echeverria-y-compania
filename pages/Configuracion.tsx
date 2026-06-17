@@ -7,7 +7,7 @@ import {
   Table as TableIcon, Server, HardDrive, UserPlus, Shield,
   SearchCode, Eye, UploadCloud,
   FileText, Package, Wallet, 
-  Boxes, Truck, Layers, Edit3
+  Boxes, Truck, Layers, Edit3, Music
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
 import { StaffRole } from '../types';
@@ -425,25 +425,98 @@ export default function Configuracion() {
 
               <div className="space-y-8">
                 {/* Control de Sonido */}
-                <div className="flex items-center justify-between p-8 bg-slate-50 rounded-[32px] border border-slate-100">
-                  <div className="flex items-center gap-5">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${settings.soundEnabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
-                      {settings.soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-8 bg-slate-50 rounded-[32px] border border-slate-100">
+                    <div className="flex items-center gap-5">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${settings.soundEnabled ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'}`}>
+                        {settings.soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-900 uppercase text-xs">Efectos Sonoros</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Activar/Desactivar avisos de audio</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-black text-slate-900 uppercase text-xs">Efectos Sonoros</p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Activar/Desactivar avisos de audio</p>
-                    </div>
+                    <button 
+                      onClick={() => {
+                        const nextEnabled = !settings.soundEnabled;
+                        updateSettings({ soundEnabled: nextEnabled });
+                        if (nextEnabled) {
+                          setTimeout(() => playSound('click'), 100);
+                        }
+                      }}
+                      className={`w-20 h-10 rounded-full p-1 transition-all ${settings.soundEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                    >
+                      <div className={`w-8 h-8 bg-white rounded-full shadow-md transition-all transform ${settings.soundEnabled ? 'translate-x-10' : 'translate-x-0'}`}></div>
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => {
-                      updateSettings({ soundEnabled: !settings.soundEnabled });
-                      if (!settings.soundEnabled) playSound('click');
-                    }}
-                    className={`w-20 h-10 rounded-full p-1 transition-all ${settings.soundEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                  >
-                    <div className={`w-8 h-8 bg-white rounded-full shadow-md transition-all transform ${settings.soundEnabled ? 'translate-x-10' : 'translate-x-0'}`}></div>
-                  </button>
+
+                  {settings.soundEnabled && (
+                    <div className="p-8 bg-slate-50/50 rounded-[32px] border border-slate-100 space-y-5 animate-in fade-in slide-in-from-top-4 duration-300">
+                      <div className="flex items-center gap-3">
+                        <Music className="text-emerald-500" size={20} />
+                        <div>
+                          <h4 className="font-black text-slate-900 text-xs uppercase">Estilo de Sonido</h4>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Selecciona un perfil y haz click para previsualizar</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {[
+                          { id: 'classic', label: 'Clásico / Senoidal', desc: 'Tonos nítidos y puros de feedback tradicional' },
+                          { id: 'retro', label: 'Retro / Arcade', desc: 'Efectos rápidos de ondas cuadradas de 8 bits' },
+                          { id: 'melodic', label: 'Eco Melódico', desc: 'Arpegios armoniosos con ataque suave y notas puras' },
+                          { id: 'sci-fi', label: 'Futurista / Láser', desc: 'Barridos dinámicos estilo comando cibernético' }
+                        ].map((style) => (
+                          <div
+                            key={style.id}
+                            onClick={() => {
+                              updateSettings({ soundType: style.id });
+                              setTimeout(() => {
+                                playSound('success');
+                              }, 150);
+                            }}
+                            className={`p-5 rounded-2xl border text-left transition-all hover:scale-[1.01] active:scale-[0.99] flex flex-col justify-between cursor-pointer ${
+                              (settings.soundType || 'classic') === style.id
+                                ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 shadow-sm ring-1 ring-emerald-300'
+                                : 'bg-white border-slate-200/60 hover:border-slate-300 text-slate-700'
+                            }`}
+                          >
+                            <div className="w-full">
+                              <p className="font-extrabold text-[11px] uppercase tracking-wide mb-1 flex items-center justify-between">
+                                {style.label}
+                                {(settings.soundType || 'classic') === style.id && (
+                                  <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-normal">Activo</span>
+                                )}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-medium leading-relaxed uppercase">{style.desc}</p>
+                            </div>
+                            <div className="mt-4 flex gap-2 w-full">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateSettings({ soundType: style.id });
+                                  setTimeout(() => playSound('click'), 100);
+                                }}
+                                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[9px] font-black uppercase text-slate-600 transition-colors flex-1 text-center"
+                              >
+                                Test Click
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateSettings({ soundType: style.id });
+                                  setTimeout(() => playSound('success'), 100);
+                                }}
+                                className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-[9px] font-black uppercase text-slate-600 transition-colors flex-1 text-center"
+                              >
+                                Test Éxito
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Zona de Peligro: Limpieza */}
