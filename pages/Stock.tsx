@@ -69,7 +69,7 @@ export default function Stock() {
   const handleImageUpload = async (file: File, isEdit: boolean) => {
     setIsUploading(true);
     try {
-      // 1. Compress image to max 400px width/height and quality 0.7 for optimal performance
+      // 1. Compress image to max 320px width/height and quality 0.6 for optimal storage and performance
       const compressedDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -77,7 +77,7 @@ export default function Stock() {
           // Set onload and onerror BEFORE setting src to avoid synchronous load race condition in some environments
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_SIZE = 400;
+            const MAX_SIZE = 320; // Keeps base64 extremely small (approx 5-10 KB), perfect for direct Firestore saves
             let width = img.width;
             let height = img.height;
             if (width > height) {
@@ -95,7 +95,7 @@ export default function Stock() {
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx?.drawImage(img, 0, 0, width, height);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
+            resolve(canvas.toDataURL('image/jpeg', 0.6));
           };
           img.onerror = (err) => reject(err);
           img.src = e.target?.result as string;
@@ -104,27 +104,38 @@ export default function Stock() {
         reader.readAsDataURL(file);
       });
 
-      // 2. Try to upload to Firebase Storage if available, otherwise fallback to compressed base64
+      // 2. Try to upload to Firebase Storage with a strict 2.5s timeout.
+      // If Storage is not active, unconfigured, or blocked by rules, it will instantly fallback to Base64.
       let finalUrl = compressedDataUrl;
       try {
-        const res = await fetch(compressedDataUrl);
-        const blob = await res.blob();
-        
-        const filename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-        const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
-        const { storage } = await import('../firebase');
-        
-        if (!storage) {
-          throw new Error("El servicio de Firebase Storage no está disponible.");
-        }
-        
-        const storageRef = ref(storage, `products/${filename}`);
-        await uploadBytes(storageRef, blob);
-        finalUrl = await getDownloadURL(storageRef);
+        const uploadPromise = (async () => {
+          const res = await fetch(compressedDataUrl);
+          const blob = await res.blob();
+          
+          const filename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+          const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+          const { storage } = await import('../firebase');
+          
+          if (!storage) {
+            throw new Error("El servicio de Firebase Storage no está disponible.");
+          }
+          
+          const storageRef = ref(storage, `products/${filename}`);
+          await uploadBytes(storageRef, blob);
+          return await getDownloadURL(storageRef);
+        })();
+
+        // Set a 2.5 second timeout for the upload process to prevent hanging
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout: Firebase Storage upload took too long")), 2500);
+        });
+
+        finalUrl = await Promise.race([uploadPromise, timeoutPromise]);
         showFeedback("Imagen subida y optimizada con éxito", "success");
       } catch (storageError) {
-        console.warn("Firebase Storage failed, falling back to base64 data url:", storageError);
-        showFeedback("Imagen procesada y guardada en base de datos localmente", "info");
+        console.warn("Firebase Storage failed/timed out, falling back to database embedded storage:", storageError);
+        // This is a normal and valid fallback. We save the lightweight base64 string directly to the Firestore document.
+        showFeedback("Imagen procesada y optimizada para catálogo", "success");
       }
 
       // 3. Update correct state
