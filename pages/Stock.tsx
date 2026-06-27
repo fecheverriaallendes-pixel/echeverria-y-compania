@@ -33,6 +33,14 @@ export default function Stock() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<StockItem | null>(null);
   const [historyTab, setHistoryTab] = useState<'TODOS' | 'INGRESOS' | 'SALIDAS'>('TODOS');
+  const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showFeedback = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setFeedbackMessage({ text, type });
+    setTimeout(() => {
+      setFeedbackMessage(null);
+    }, 5000);
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -64,10 +72,9 @@ export default function Stock() {
       // 1. Compress image to max 400px width/height and quality 0.7 for optimal performance
       const compressedDataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.readAsDataURL(file);
         reader.onload = (e) => {
           const img = new window.Image();
-          img.src = e.target?.result as string;
+          // Set onload and onerror BEFORE setting src to avoid synchronous load race condition in some environments
           img.onload = () => {
             const canvas = document.createElement('canvas');
             const MAX_SIZE = 400;
@@ -91,8 +98,10 @@ export default function Stock() {
             resolve(canvas.toDataURL('image/jpeg', 0.7));
           };
           img.onerror = (err) => reject(err);
+          img.src = e.target?.result as string;
         };
         reader.onerror = (err) => reject(err);
+        reader.readAsDataURL(file);
       });
 
       // 2. Try to upload to Firebase Storage if available, otherwise fallback to compressed base64
@@ -105,11 +114,17 @@ export default function Stock() {
         const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
         const { storage } = await import('../firebase');
         
+        if (!storage) {
+          throw new Error("El servicio de Firebase Storage no está disponible.");
+        }
+        
         const storageRef = ref(storage, `products/${filename}`);
         await uploadBytes(storageRef, blob);
         finalUrl = await getDownloadURL(storageRef);
+        showFeedback("Imagen subida y optimizada con éxito", "success");
       } catch (storageError) {
         console.warn("Firebase Storage failed, falling back to base64 data url:", storageError);
+        showFeedback("Imagen procesada y guardada en base de datos localmente", "info");
       }
 
       // 3. Update correct state
@@ -121,7 +136,7 @@ export default function Stock() {
       playSound('success');
     } catch (err) {
       console.error("Error processing image:", err);
-      alert("Error al procesar la imagen.");
+      showFeedback("Error al procesar la imagen seleccionada.", "error");
     } finally {
       setIsUploading(false);
     }
@@ -296,7 +311,8 @@ export default function Stock() {
 
     const codeExists = stock.some(s => s.codigo.toUpperCase() === finalCodigo.toUpperCase());
     if (codeExists) {
-        alert(`ERROR: El código ${finalCodigo} ya está en uso. Por favor ingresa uno diferente.`);
+        showFeedback(`ERROR: El código ${finalCodigo} ya está en uso. Por favor ingresa uno diferente.`, "error");
+        playSound('error');
         return;
     }
 
@@ -312,7 +328,8 @@ export default function Stock() {
     
     const conflict = stock.find(s => s.id !== editingItem.id && (s.codigo || '').toUpperCase() === (editingItem.codigo || '').toUpperCase());
     if (conflict) {
-      alert(`ERROR: No puedes usar el código ${editingItem.codigo} porque ya pertenece a otro producto (${conflict.tipo}).`);
+      showFeedback(`ERROR: No puedes usar el código ${editingItem.codigo} porque ya pertenece a otro producto (${conflict.tipo}).`, "error");
+      playSound('error');
       return;
     }
 
@@ -330,6 +347,27 @@ export default function Stock() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-20">
+      {/* Toast Notification Container */}
+      {feedbackMessage && (
+        <div className="fixed top-6 right-6 z-[100] animate-in slide-in-from-top-4 duration-300 max-w-md">
+          <div className={`p-5 rounded-[24px] shadow-2xl flex items-center gap-4 border-2 ${
+            feedbackMessage.type === 'success' 
+              ? 'bg-emerald-600 text-white border-emerald-500' 
+              : feedbackMessage.type === 'error'
+              ? 'bg-red-600 text-white border-red-500'
+              : 'bg-slate-900 text-white border-slate-800'
+          }`}>
+            <span className="font-black text-xs uppercase tracking-wider">{feedbackMessage.text}</span>
+            <button 
+              onClick={() => setFeedbackMessage(null)}
+              className="ml-auto text-white/70 hover:text-white font-black hover:scale-115 transition-transform"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8">
         <div>
           <h2 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Inventario Central</h2>
@@ -388,10 +426,10 @@ export default function Stock() {
                       await updateStockItem(item.id, { stockActual: 0 });
                     }
                     playSound('success');
-                    alert("✅ Corrección masiva exitosa: Todos los productos con stock negativo han sido reajustados a 0.");
+                    showFeedback("✅ Corrección masiva exitosa: Todos los productos con stock negativo han sido reajustados a 0.", "success");
                   } catch (err) {
                     console.error("Error updating negative stocks:", err);
-                    alert("Error al corregir algunos artículos. Revisa la consola.");
+                    showFeedback("Error al corregir algunos artículos. Revisa la consola.", "error");
                   }
                 }
               }}
