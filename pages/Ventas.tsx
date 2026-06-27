@@ -189,7 +189,7 @@ export default function Ventas() {
         <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-900 transition-colors" size={28} />
         <input 
           type="text" 
-          placeholder="Buscar por cliente, fardo o número de venta..."
+          placeholder="Buscar por cliente, producto o número de venta..."
           className="w-full pl-16 pr-8 py-5 rounded-[32px] border-2 border-slate-100 focus:border-slate-300 outline-none transition-all shadow-sm text-xl font-bold"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -428,11 +428,10 @@ export default function Ventas() {
                     onChange={(e) => setEditingSale({...editingSale, variante: e.target.value})}
                   >
                     <option value="">SELECCIONAR TIPO...</option>
-                    <option value="FARDO">FARDO COMPLETO</option>
-                    <option value="MEDIO FARDO">MEDIO FARDO</option>
-                    <option value="LOTE">LOTE</option>
-                    <option value="SACO">SACO</option>
-                    <option value="PACK">PACK</option>
+                    <option value="UNIDAD">UNIDAD STANDARD</option>
+                    <option value="CAJA">CAJA COMPLETA</option>
+                    <option value="SET">SET DE PRODUCTOS</option>
+                    <option value="PACK">PACK DE PRODUCTOS</option>
                   </select>
                 </div>
               </div>

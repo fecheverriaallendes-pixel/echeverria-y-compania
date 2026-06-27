@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp } from 'lucide-react';
+import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp, Camera, Upload } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
 import { StaffRole, StockItem } from '../types';
 
@@ -27,7 +27,7 @@ export default function Stock() {
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState('TODOS');
-  const [categoryFilter, setCategoryFilter] = useState<'TODOS' | 'FARDO' | 'LOTE' | 'NEGATIVO'>('TODOS');
+  const [categoryFilter, setCategoryFilter] = useState<'TODOS' | 'UNIDAD' | 'CAJA' | 'NEGATIVO'>('TODOS');
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -49,11 +49,83 @@ export default function Stock() {
     precioCosto: 0, 
     precioSugerido: 0, 
     stockActual: 1,
-    unidad: 'FARDO' as 'FARDO' | 'PIEZA' | 'MEDIO FARDO' | 'LOTE',
-    categoria: 'FARDO' as 'FARDO' | 'LOTE',
-    peso: 0
+    unidad: 'UNIDAD' as any,
+    categoria: 'ESTANDAR' as any,
+    peso: 0,
+    imagenUrl: '',
+    especificaciones: ''
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (file: File, isEdit: boolean) => {
+    setIsUploading(true);
+    try {
+      // 1. Compress image to max 400px width/height and quality 0.7 for optimal performance
+      const compressedDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+          const img = new window.Image();
+          img.src = e.target?.result as string;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 400;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.7));
+          };
+          img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+      });
+
+      // 2. Try to upload to Firebase Storage if available, otherwise fallback to compressed base64
+      let finalUrl = compressedDataUrl;
+      try {
+        const res = await fetch(compressedDataUrl);
+        const blob = await res.blob();
+        
+        const filename = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+        const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+        const { storage } = await import('../firebase');
+        
+        const storageRef = ref(storage, `products/${filename}`);
+        await uploadBytes(storageRef, blob);
+        finalUrl = await getDownloadURL(storageRef);
+      } catch (storageError) {
+        console.warn("Firebase Storage failed, falling back to base64 data url:", storageError);
+      }
+
+      // 3. Update correct state
+      if (isEdit && editingItem) {
+        setEditingItem({ ...editingItem, imagenUrl: finalUrl });
+      } else {
+        setNewBale(prev => ({ ...prev, imagenUrl: finalUrl }));
+      }
+      playSound('success');
+    } catch (err) {
+      console.error("Error processing image:", err);
+      alert("Error al procesar la imagen.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const canModify = currentUser?.rol === StaffRole.ADMIN || currentUser?.rol === StaffRole.BODEGA;
 
@@ -150,12 +222,16 @@ export default function Stock() {
       const matchesSearch = normalizeText(item.codigo || '').includes(normalizedSearch) || 
                            normalizeText(item.tipo || '').includes(normalizedSearch);
       const matchesProvider = providerFilter === 'TODOS' || (item.proveedor || '').toUpperCase() === providerFilter;
-      const itemCategory = item.categoria || 'FARDO';
-      const matchesCategory = categoryFilter === 'TODOS' 
-        ? true 
-        : categoryFilter === 'NEGATIVO' 
-          ? item.stockActual < 0 
-          : itemCategory === categoryFilter;
+      
+      let matchesCategory = true;
+      if (categoryFilter === 'NEGATIVO') {
+        matchesCategory = item.stockActual < 0;
+      } else if (categoryFilter === 'UNIDAD') {
+        matchesCategory = item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.categoria === 'ESTANDAR' || item.categoria === 'FARDO';
+      } else if (categoryFilter === 'CAJA') {
+        matchesCategory = item.unidad === 'CAJA' || item.unidad === 'PACK' || item.unidad === 'SET' || item.categoria === 'MAYORISTA' || item.categoria === 'LOTE';
+      }
+
       return matchesSearch && matchesProvider && matchesCategory;
     });
   }, [stock, searchTerm, providerFilter, categoryFilter]);
@@ -225,7 +301,7 @@ export default function Stock() {
     }
 
     addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
-    setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'FARDO' });
+    setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '' });
     setIsAdding(false);
     playSound('success');
   };
@@ -287,7 +363,7 @@ export default function Stock() {
       <div className="flex flex-col lg:flex-row gap-6 items-center justify-between w-full">
         <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
           <div className="flex bg-slate-100 p-2 rounded-[32px] shadow-sm">
-            {(['TODOS', 'FARDO', 'LOTE', 'NEGATIVO'] as const).map((cat) => (
+            {(['TODOS', 'UNIDAD', 'CAJA', 'NEGATIVO'] as const).map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -296,7 +372,7 @@ export default function Stock() {
                   categoryFilter === cat ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                {cat === 'TODOS' ? 'Todos' : cat === 'FARDO' ? 'Unidades' : cat === 'LOTE' ? 'Lotes' : '⚠️ Negativos'}
+                {cat === 'TODOS' ? 'Todos' : cat === 'UNIDAD' ? 'Unidades' : cat === 'CAJA' ? 'Cajas/Packs' : '⚠️ Negativos'}
               </button>
             ))}
           </div>
@@ -372,16 +448,16 @@ export default function Stock() {
               {filteredStock.map((item) => (
                 <tr key={`${item.id}-${item.codigo}`} className={`group hover:bg-slate-50 transition-colors ${item.stockActual < 3 && item.stockActual > 0 ? 'bg-red-50/30' : ''}`}>
                   <td className="px-8 py-6">
-                    <span className={`p-2 rounded-xl flex items-center justify-center w-10 h-10 ${item.categoria === 'LOTE' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`} title={item.categoria || 'FARDO'}>
-                      {item.categoria === 'LOTE' ? <Boxes size={18} /> : <Layers size={18} />}
+                    <span className={`p-2 rounded-xl flex items-center justify-center w-10 h-10 ${(item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`} title={item.categoria === 'MAYORISTA' ? 'Mayorista' : 'Estándar'}>
+                      {(item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') ? <Boxes size={18} /> : <Layers size={18} />}
                     </span>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${item.unidad === 'FARDO' ? 'bg-indigo-100 text-indigo-700' : item.unidad === 'LOTE' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
-                        {item.unidad}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${(item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.unidad === 'FARDO') ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {item.unidad === 'FARDO' ? 'UNIDAD' : item.unidad}
                       </span>
-                      {item.peso && item.categoria === 'LOTE' && (
+                      {item.peso && (item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') && (
                         <span className="text-[10px] font-black text-amber-600 mt-1 ml-1">{item.peso} KG</span>
                       )}
                     </div>
@@ -389,12 +465,26 @@ export default function Stock() {
                   <td className="px-8 py-6 font-mono font-black text-slate-400 uppercase text-xs tracking-widest">{item.codigo}</td>
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${item.stockActual < 3 ? 'bg-red-100 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
-                        <Package size={22} />
-                      </div>
+                      {item.imagenUrl ? (
+                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform flex-shrink-0">
+                          <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0 ${item.stockActual < 3 ? 'bg-red-100 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
+                          <Package size={22} />
+                        </div>
+                      )}
                       <div className="flex flex-col">
                         <span className="font-black text-slate-900 uppercase text-sm tracking-tighter leading-none">{item.tipo}</span>
-                        <span className="text-[9px] font-bold text-blue-500 uppercase mt-1 tracking-widest">{item.proveedor}</span>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">{item.proveedor}</span>
+                          {item.especificaciones && (
+                            <>
+                              <span className="text-slate-300 text-[10px]">•</span>
+                              <span className="text-[10px] text-slate-500 italic max-w-sm truncate" title={item.especificaciones}>{item.especificaciones}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -405,7 +495,7 @@ export default function Stock() {
                     <div className={`inline-flex flex-col items-center justify-center w-14 h-14 rounded-2xl ${item.stockActual > 3 ? 'bg-emerald-50 text-emerald-600' : item.stockActual > 0 ? 'bg-amber-50 text-amber-600 animate-pulse border border-amber-200' : 'bg-red-50 text-red-600'}`}>
                       <span className="text-xl font-black leading-none">{item.stockActual}</span>
                       <span className="text-[8px] font-black uppercase mt-1">
-                        {item.unidad === 'FARDO' ? 'Uds' : item.unidad === 'LOTE' ? 'Lotes' : 'Kgs'}
+                        {item.unidad === 'CAJA' ? 'Cajas' : item.unidad === 'PACK' ? 'Packs' : item.unidad === 'SET' ? 'Sets' : 'Uds'}
                       </span>
                     </div>
                   </td>
@@ -457,21 +547,21 @@ export default function Stock() {
             <form onSubmit={handleSubmit} className="p-12 space-y-8 overflow-y-auto max-h-[70vh]">
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Categoría de Producto</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Categoría de Venta</label>
                   <div className="flex bg-slate-100 p-2 rounded-[28px] shadow-inner">
                     <button 
                       type="button"
-                      onClick={() => setNewBale({...newBale, categoria: 'FARDO', unidad: 'FARDO'})}
-                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${newBale.categoria === 'FARDO' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setNewBale({...newBale, categoria: 'ESTANDAR', unidad: 'UNIDAD'})}
+                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${newBale.categoria === 'ESTANDAR' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}
                     >
-                      <Layers size={20} /> Estándar
+                      <Layers size={20} /> Individual
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setNewBale({...newBale, categoria: 'LOTE', unidad: 'LOTE'})}
-                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${newBale.categoria === 'LOTE' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setNewBale({...newBale, categoria: 'MAYORISTA', unidad: 'PACK'})}
+                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${newBale.categoria === 'MAYORISTA' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500 hover:text-slate-900'}`}
                     >
-                      <Boxes size={20} /> Lote
+                      <Boxes size={20} /> Mayorista
                     </button>
                   </div>
                 </div>
@@ -483,19 +573,20 @@ export default function Stock() {
                     value={newBale.unidad}
                     onChange={(e) => setNewBale({...newBale, unidad: e.target.value as any})}
                   >
-                    <option value="FARDO">FARDO</option>
-                    <option value="MEDIO FARDO">MEDIO FARDO</option>
-                    <option value="LOTE">LOTE</option>
+                    <option value="UNIDAD">UNIDAD</option>
                     <option value="PIEZA">PIEZA</option>
+                    <option value="CAJA">CAJA</option>
+                    <option value="PACK">PACK</option>
+                    <option value="SET">SET</option>
                   </select>
                 </div>
               </div>
 
-              {newBale.categoria === 'LOTE' && (
+              {newBale.categoria === 'MAYORISTA' && (
                 <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Peso del Lote (Kgs)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Peso del Bulto (Kgs - Opcional)</label>
                   <div className="flex gap-4">
-                    {[10, 20].map(w => (
+                    {[5, 10, 20].map(w => (
                       <button
                         key={w}
                         type="button"
@@ -544,6 +635,68 @@ export default function Stock() {
                   <input required type="number" className="w-full px-6 py-4 bg-emerald-500 text-white rounded-2xl font-black" value={newBale.precioSugerido || ''} onChange={(e) => setNewBale({...newBale, precioSugerido: Number(e.target.value)})}/>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Características y Especificaciones</label>
+                <textarea 
+                  className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold outline-none focus:border-emerald-500 min-h-[90px] text-sm" 
+                  placeholder="Ej: Material: 100% Algodón, Color: Negro, Talla: M, Conectividad: Bluetooth 5.2, Resistencia al agua..." 
+                  value={newBale.especificaciones || ''} 
+                  onChange={(e) => setNewBale({...newBale, especificaciones: e.target.value})}
+                />
+              </div>
+
+              {/* Foto del Producto (Opcional) */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Foto del Producto (Opcional)</label>
+                <div className="flex gap-6 items-center bg-slate-50 p-6 rounded-[28px] border-2 border-dashed border-slate-200 hover:border-emerald-500 transition-all">
+                  {newBale.imagenUrl ? (
+                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 flex-shrink-0">
+                      <img src={newBale.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => setNewBale({ ...newBale, imagenUrl: '' })} 
+                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200/50">
+                      <Camera size={32} />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm font-black text-slate-700">Adjuntar Foto del Producto</p>
+                    <p className="text-xs text-slate-400 mt-1">Sube una imagen desde tu cámara o galería para que se visualice en el catálogo que compartes con los clientes.</p>
+                    <div className="mt-4 flex gap-2 items-center">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        id="product-image-upload" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, false);
+                        }}
+                        disabled={isUploading}
+                      />
+                      <label 
+                        htmlFor="product-image-upload" 
+                        className={`px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-black transition-all ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
+                      >
+                        {isUploading ? 'Subiendo...' : 'Seleccionar Archivo'}
+                      </label>
+                      {isUploading && (
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">
+                          Procesando Imagen...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <button type="submit" className="w-full py-7 bg-slate-900 text-white rounded-[32px] font-black text-2xl shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-4 active:scale-95">
                 <Boxes size={32} /> CONFIRMAR EN BODEGA
               </button>
@@ -566,21 +719,21 @@ export default function Stock() {
             <form onSubmit={handleUpdate} className="p-12 space-y-8 overflow-y-auto max-h-[70vh]">
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Categoría de Producto</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Categoría de Venta</label>
                   <div className="flex bg-slate-100 p-2 rounded-[28px] shadow-inner">
                     <button 
                       type="button"
-                      onClick={() => setEditingItem({...editingItem, categoria: 'FARDO'})}
-                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${editingItem.categoria === 'FARDO' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500'}`}
+                      onClick={() => setEditingItem({...editingItem, categoria: 'ESTANDAR'})}
+                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${(editingItem.categoria === 'ESTANDAR' || editingItem.categoria === 'FARDO') ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500'}`}
                     >
-                      <Layers size={20} /> Estándar
+                      <Layers size={20} /> Individual
                     </button>
                     <button 
                       type="button"
-                      onClick={() => setEditingItem({...editingItem, categoria: 'LOTE'})}
-                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${(editingItem.categoria || (editingItem as any).unidad === 'LOTE' ? 'LOTE' : 'FARDO') === 'LOTE' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500'}`}
+                      onClick={() => setEditingItem({...editingItem, categoria: 'MAYORISTA'})}
+                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${(editingItem.categoria === 'MAYORISTA' || editingItem.categoria === 'LOTE') ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500'}`}
                     >
-                      <Boxes size={20} /> Lote
+                      <Boxes size={20} /> Mayorista
                     </button>
                   </div>
                 </div>
@@ -589,22 +742,23 @@ export default function Stock() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Tipo de Unidad</label>
                   <select 
                     className="w-full px-7 py-5 bg-slate-100 rounded-[28px] font-black text-xs uppercase tracking-widest outline-none border-2 border-transparent"
-                    value={editingItem.unidad}
+                    value={editingItem.unidad === 'FARDO' ? 'UNIDAD' : editingItem.unidad === 'LOTE' ? 'PACK' : editingItem.unidad}
                     onChange={(e) => setEditingItem({...editingItem, unidad: e.target.value as any})}
                   >
-                    <option value="FARDO">FARDO</option>
-                    <option value="MEDIO FARDO">MEDIO FARDO</option>
-                    <option value="LOTE">LOTE</option>
+                    <option value="UNIDAD">UNIDAD</option>
                     <option value="PIEZA">PIEZA</option>
+                    <option value="CAJA">CAJA</option>
+                    <option value="PACK">PACK</option>
+                    <option value="SET">SET</option>
                   </select>
                 </div>
               </div>
 
-              {editingItem.categoria === 'LOTE' && (
+              {(editingItem.categoria === 'MAYORISTA' || editingItem.categoria === 'LOTE') && (
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Peso del Lote (Kgs)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Peso del Bulto (Kgs - Opcional)</label>
                   <div className="flex gap-4">
-                    {[10, 20].map(w => (
+                    {[5, 10, 20].map(w => (
                       <button
                         key={w}
                         type="button"
@@ -651,6 +805,68 @@ export default function Stock() {
                   <input required type="number" className="w-full px-7 py-5 bg-slate-50 rounded-[28px] font-black text-blue-600 outline-none focus:border-blue-500 border-2 border-transparent" value={editingItem.precioSugerido} onChange={(e) => setEditingItem({...editingItem, precioSugerido: Number(e.target.value)})}/>
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Características y Especificaciones</label>
+                <textarea 
+                  className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold outline-none focus:border-blue-500 min-h-[90px] text-sm" 
+                  placeholder="Ej: Material: 100% Algodón, Color: Negro, Talla: M, Conectividad: Bluetooth 5.2, Resistencia al agua..." 
+                  value={editingItem.especificaciones || ''} 
+                  onChange={(e) => setEditingItem({...editingItem, especificaciones: e.target.value})}
+                />
+              </div>
+
+              {/* Foto del Producto */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Foto del Producto (Opcional)</label>
+                <div className="flex gap-6 items-center bg-slate-50 p-6 rounded-[28px] border-2 border-dashed border-slate-200 hover:border-blue-500 transition-all">
+                  {editingItem.imagenUrl ? (
+                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 flex-shrink-0">
+                      <img src={editingItem.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <button 
+                        type="button" 
+                        onClick={() => setEditingItem({ ...editingItem, imagenUrl: '' })} 
+                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-24 h-24 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200/50">
+                      <Camera size={32} />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm font-black text-slate-700">Actualizar Foto del Producto</p>
+                    <p className="text-xs text-slate-400 mt-1">Sube una nueva foto para actualizar o reemplazar la imagen actual del producto en el catálogo.</p>
+                    <div className="mt-4 flex gap-2 items-center">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        id="product-image-edit" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file, true);
+                        }}
+                        disabled={isUploading}
+                      />
+                      <label 
+                        htmlFor="product-image-edit" 
+                        className={`px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-blue-700 transition-all ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
+                      >
+                        {isUploading ? 'Subiendo...' : 'Seleccionar Archivo'}
+                      </label>
+                      {isUploading && (
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest animate-pulse">
+                          Procesando Imagen...
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <button type="submit" className="w-full py-7 bg-blue-600 text-white rounded-[32px] font-black text-2xl shadow-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95">
                 <Save size={32} /> ACTUALIZAR REGISTRO
               </button>

@@ -21,7 +21,9 @@
       "type": "object",
       "properties": {
         "codigo": { "type": "string" },
-        "stockActual": { "type": "number" }
+        "stockActual": { "type": "number" },
+        "imagenUrl": { "type": "string" },
+        "especificaciones": { "type": "string" }
       },
       "required": ["codigo", "stockActual"]
     }

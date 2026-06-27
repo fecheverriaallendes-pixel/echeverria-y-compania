@@ -280,10 +280,10 @@ export default function RegistrarVenta() {
                       <input type="number" className="w-16 px-2 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none" placeholder="CANT" value={newItem.cantidad} onChange={(e) => setNewItem({...newItem, cantidad: Number(e.target.value)})}/>
                       <input type="number" className="w-24 px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none" placeholder="VALOR" value={newItem.valorUnitario} onChange={(e) => setNewItem({...newItem, valorUnitario: Number(e.target.value)})}/>
                       <select className="px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none text-[10px]" value={newItem.tipoComision} onChange={(e) => setNewItem({...newItem, tipoComision: e.target.value as CommissionType})}>
-                          <option value={CommissionType.FARDO_NORMAL}>FARDO</option>
+                          <option value={CommissionType.FARDO_NORMAL}>ESTÁNDAR</option>
                           <option value={CommissionType.FARDO_PROMO}>PROMO</option>
-                          <option value={CommissionType.MEDIO_FARDO}>MEDIO</option>
-                          <option value={CommissionType.LOTE}>LOTE</option>
+                          <option value={CommissionType.MEDIO_FARDO}>ESPECIAL</option>
+                          <option value={CommissionType.LOTE}>MAYORISTA</option>
                       </select>
                       <button type="button" onClick={() => { 
                           if(newItem.codigoFardo && newItem.cantidad > 0 && newItem.valorUnitario > 0) {
@@ -389,17 +389,17 @@ export default function RegistrarVenta() {
                     const newVar = e.target.value;
                     let newComm = formData.tipoComision;
                     if (formData.esManual) {
-                        if (newVar === 'LOTE') newComm = CommissionType.LOTE;
-                        else if (newVar === 'MEDIO FARDO') newComm = CommissionType.MEDIO_FARDO;
-                        else if (newVar === 'FARDO') newComm = CommissionType.FARDO_NORMAL;
+                        if (newVar === 'CAJA') newComm = CommissionType.LOTE;
+                        else if (newVar === 'SET' || newVar === 'PACK') newComm = CommissionType.MEDIO_FARDO;
+                        else if (newVar === 'UNIDAD') newComm = CommissionType.FARDO_NORMAL;
                     }
                     setFormData({...formData, variante: newVar, tipoComision: newComm});
                 }}>
                     <option value="">ELEGIR...</option>
-                    <option value="FARDO">FARDO</option>
-                    <option value="MEDIO FARDO">MEDIO FARDO</option>
-                    <option value="SACO">SACO</option>
-                    <option value="LOTE">LOTE</option>
+                    <option value="UNIDAD">UNIDAD STANDARD</option>
+                    <option value="CAJA">CAJA COMPLETA</option>
+                    <option value="SET">SET DE PRODUCTOS</option>
+                    <option value="PACK">PACK DE PRODUCTOS</option>
                 </select>
               </div>
               <div className="md:col-span-2 space-y-4">

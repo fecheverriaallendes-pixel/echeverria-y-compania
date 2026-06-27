@@ -48,10 +48,10 @@ export interface SaleItem {
 }
 
 export enum CommissionType {
-  FARDO_NORMAL = 'Fardo Normal ($3.000)',
-  FARDO_PROMO = 'Fardo Promoción ($1.500)',
-  MEDIO_FARDO = 'Medio Fardo ($1.500)',
-  LOTE = 'Lote ($1.000)'
+  FARDO_NORMAL = 'Comisión Estándar ($3.000)',
+  FARDO_PROMO = 'Comisión Promoción ($1.500)',
+  MEDIO_FARDO = 'Comisión Especial ($1.500)',
+  LOTE = 'Comisión Mayorista ($1.000)'
 }
 
 export const COMMISSION_VALUES: Record<CommissionType, number> = {
@@ -112,10 +112,12 @@ export interface StockItem {
   precioSugerido: number;
   stockActual: number; 
   disponible: boolean;
-  unidad: 'FARDO' | 'PIEZA' | 'MEDIO FARDO' | 'LOTE' | string;
-  categoria?: 'FARDO' | 'LOTE' | string;
-  peso?: number; // Para lotes (10 o 20 kgs)
+  unidad: 'UNIDAD' | 'PIEZA' | 'CAJA' | 'PACK' | 'SET' | string;
+  categoria?: 'ESTANDAR' | 'MAYORISTA' | string;
+  peso?: number; // Para bultos pesados o lotes (Opcional)
   promocion?: boolean;
+  imagenUrl?: string;
+  especificaciones?: string;
 }
 
 export interface Sale {

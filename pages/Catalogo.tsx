@@ -408,6 +408,11 @@ export default function Catalogo() {
                     {item.tipo}
                   </h3>
                 </div>
+                {item.imagenUrl && (
+                  <div className="w-full h-48 overflow-hidden bg-slate-50 border-b border-slate-100 flex items-center justify-center relative">
+                    <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                )}
                 <div className="p-8 flex flex-col items-center text-center flex-1 print:p-4">
                    <div className="px-4 py-1.5 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 print:mb-2 print:text-[8px] print:py-0.5">
                      {item.proveedor}
@@ -415,6 +420,12 @@ export default function Catalogo() {
                    <div className="text-5xl font-black text-slate-900 tracking-tighter mb-6 print:text-2xl print:mb-2">
                      ${item.precioSugerido.toLocaleString('es-CL')}
                    </div>
+                   {item.especificaciones && (
+                     <div className="w-full text-slate-500 text-xs italic mb-4 max-h-[80px] overflow-y-auto bg-slate-50 p-2.5 rounded-2xl border border-slate-100/50 text-left">
+                       <span className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Especificaciones:</span>
+                       {item.especificaciones}
+                     </div>
+                   )}
                    <div className="w-full pt-6 border-t border-slate-50 flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest print:pt-2 print:text-[7px]">
                       <div className="flex items-center gap-2">
                          <Tag size={12} className="print:hidden" /> {item.codigo}

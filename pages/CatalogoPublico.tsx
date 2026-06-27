@@ -18,7 +18,7 @@ const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.
 export default function CatalogoPublico() {
   const { stock } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'TODOS' | 'FARDO' | 'LOTE'>('TODOS');
+  const [activeFilter, setActiveFilter] = useState<'TODOS' | 'UNIDAD' | 'CAJA'>('TODOS');
 
   // Filter only items with stock
   const availableStock = useMemo(() => {
@@ -30,8 +30,12 @@ export default function CatalogoPublico() {
       const matchesSearch = (item.tipo || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                            (item.codigo || '').toLowerCase().includes(searchTerm.toLowerCase());
       
-      const itemCategory = item.categoria || 'FARDO';
-      const matchesFilter = activeFilter === 'TODOS' || itemCategory === activeFilter;
+      let matchesFilter = true;
+      if (activeFilter === 'UNIDAD') {
+        matchesFilter = item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.categoria === 'ESTANDAR' || item.categoria === 'FARDO';
+      } else if (activeFilter === 'CAJA') {
+        matchesFilter = item.unidad === 'CAJA' || item.unidad === 'PACK' || item.unidad === 'SET' || item.categoria === 'MAYORISTA' || item.categoria === 'LOTE';
+      }
       
       return matchesSearch && matchesFilter;
     }).sort((a, b) => (a.tipo || '').localeCompare(b.tipo || ''));
@@ -77,7 +81,7 @@ export default function CatalogoPublico() {
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {(['TODOS', 'FARDO', 'LOTE'] as const).map((filter) => (
+            {(['TODOS', 'UNIDAD', 'CAJA'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
@@ -87,7 +91,7 @@ export default function CatalogoPublico() {
                     : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {filter === 'TODOS' ? 'Todo' : filter === 'FARDO' ? 'Unidades' : 'Lotes'}
+                {filter === 'TODOS' ? 'Todo' : filter === 'UNIDAD' ? 'Unidades' : 'Cajas/Packs'}
               </button>
             ))}
           </div>
@@ -103,6 +107,11 @@ export default function CatalogoPublico() {
                 key={item.id} 
                 className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden flex flex-col group active:scale-[0.98] transition-transform"
               >
+                {item.imagenUrl && (
+                  <div className="w-full h-56 overflow-hidden bg-slate-50 border-b border-slate-100 flex items-center justify-center relative">
+                    <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                )}
                 <div className="p-6 flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex flex-col gap-1">
@@ -118,6 +127,13 @@ export default function CatalogoPublico() {
                       {item.unidad} {item.peso && item.categoria === 'LOTE' ? `(${item.peso}KG)` : ''}
                     </span>
                   </div>
+
+                  {item.especificaciones && (
+                    <div className="text-xs text-slate-500 italic mb-4 max-h-[60px] overflow-y-auto bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 text-left">
+                      <span className="block text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1">Especificaciones:</span>
+                      {item.especificaciones}
+                    </div>
+                  )}
 
                   <div className="flex items-end justify-between">
                     <div>

@@ -237,7 +237,7 @@ export default function Proveedores() {
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-4">Descripción / Observaciones</label>
-                <textarea className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic outline-none min-h-[100px]" placeholder="Ej: Pago 20 fardos premium de invierno..." value={newPurchase.descripcion} onChange={(e) => setNewPurchase({...newPurchase, descripcion: e.target.value})}/>
+                <textarea className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic outline-none min-h-[100px]" placeholder="Ej: Importación de 500 audífonos bluetooth..." value={newPurchase.descripcion} onChange={(e) => setNewPurchase({...newPurchase, descripcion: e.target.value})}/>
               </div>
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-4">Monto Total Pactado ($)</label>
@@ -358,7 +358,7 @@ export default function Proveedores() {
 
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-4">Observación</label>
-                <input type="text" className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic outline-none" placeholder="Ej: Pago parcial fardo polerones..." value={newAbono.observacion} onChange={(e) => setNewAbono({...newAbono, observacion: e.target.value})}/>
+                <input type="text" className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-3xl font-bold italic outline-none" placeholder="Ej: Abono parcial importación de relojes inteligentes..." value={newAbono.observacion} onChange={(e) => setNewAbono({...newAbono, observacion: e.target.value})}/>
               </div>
 
               <button type="submit" className="w-full py-6 bg-emerald-600 text-white rounded-3xl font-black text-xl shadow-2xl hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 active:scale-95">
