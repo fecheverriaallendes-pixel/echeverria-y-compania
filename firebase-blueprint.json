@@ -10,6 +10,9 @@
         "cliente": { "type": "string" },
         "total": { "type": "number" },
         "status": { "type": "string", "enum": ["Pendiente", "Enviado"] },
+        "estadoPago": { "type": "string" },
+        "medioPago": { "type": "string" },
+        "montoAbonado": { "type": "number" },
         "enviado": { "type": "boolean" },
         "datosCompletos": { "type": "boolean" }
       },

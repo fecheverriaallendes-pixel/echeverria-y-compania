@@ -29,6 +29,8 @@ export default function RegistrarVenta() {
     cantidad: number;
     direccion: string;
     estadoPago: string;
+    medioPago: string;
+    montoAbonado: number;
     tipoComision: CommissionType;
     juntaCompra: string;
     observaciones: string;
@@ -46,6 +48,8 @@ export default function RegistrarVenta() {
     cantidad: 1,
     direccion: '',
     estadoPago: 'Pendiente',
+    medioPago: 'Efectivo',
+    montoAbonado: 0,
     tipoComision: CommissionType.FARDO_NORMAL,
     juntaCompra: 'DESPACHO INMEDIATO',
     observaciones: '',
@@ -107,6 +111,12 @@ export default function RegistrarVenta() {
     if (mode === 'QUICK') quickNameRef.current?.focus();
   }, [mode, success]);
 
+  useEffect(() => {
+    if (formData.estadoPago === 'Pagado') {
+      setFormData(prev => ({ ...prev, montoAbonado: calculatedTotal }));
+    }
+  }, [calculatedTotal, formData.estadoPago]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const isQuick = mode === 'QUICK';
@@ -144,11 +154,14 @@ export default function RegistrarVenta() {
       }
     }
     
+    const finalTotal = isNotaVenta ? items.reduce((acc, item) => acc + item.valorUnitario * item.cantidad, 0) : formData.valorUnitario * formData.cantidad;
+    
     const finalData = {
       ...formData,
       tipoVenta: isQuick ? SaleType.LIVE : isNotaVenta ? SaleType.NOTA_VENTA : SaleType.NORMAL,
       items: isNotaVenta ? items : undefined,
-      total: isNotaVenta ? items.reduce((acc, item) => acc + item.valorUnitario * item.cantidad, 0) : formData.valorUnitario * formData.cantidad,
+      total: finalTotal,
+      montoAbonado: isQuick ? 0 : (formData.estadoPago === 'Pagado' ? finalTotal : formData.montoAbonado),
       status: SaleStatus.PENDIENTE,
       datosCompletos: !isQuick,
       variante: isQuick ? '' : formData.variante, 
@@ -166,7 +179,7 @@ export default function RegistrarVenta() {
     setFormData({
       cliente: '', vendedor: formData.vendedor, telefono: '', rut: '',
       codigoFardo: '', esManual: true, variante: isQuick ? '' : 'Estándar', valorUnitario: 0, cantidad: 1,
-      direccion: '', estadoPago: 'Pendiente', tipoComision: CommissionType.FARDO_NORMAL,
+      direccion: '', estadoPago: 'Pendiente', medioPago: 'Efectivo', montoAbonado: 0, tipoComision: CommissionType.FARDO_NORMAL,
       juntaCompra: 'DESPACHO INMEDIATO', observaciones: '', tipoDespacho: undefined
     });
     setItems([]);
@@ -414,12 +427,114 @@ export default function RegistrarVenta() {
             </div>
           )}
 
-          <div className="bg-slate-900 p-10 rounded-[40px] text-white shadow-2xl">
-            <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-4"><DollarSign size={18} className="text-emerald-400" /> Valor Final Venta ($)</label>
-            <div className="w-full px-8 py-6 bg-slate-800 border-2 border-slate-700 rounded-[28px] text-5xl font-black text-emerald-400">
-               ${calculatedTotal.toLocaleString()}
+          {mode !== 'QUICK' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Tarjeta de Pago y Abonos */}
+              <div className="bg-white p-8 rounded-[40px] border-2 border-slate-100 shadow-xl space-y-6">
+                <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">
+                  <Coins size={14} className="text-blue-500" /> Detalle de Pago y Abonos
+                </label>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-2 block">Estado de Pago</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-sm"
+                      value={formData.estadoPago}
+                      onChange={(e) => {
+                        const newStatus = e.target.value;
+                        setFormData(prev => ({
+                          ...prev, 
+                          estadoPago: newStatus,
+                          montoAbonado: newStatus === 'Pagado' ? calculatedTotal : prev.montoAbonado
+                        }));
+                      }}
+                    >
+                      <option value="Pendiente">PENDIENTE / CRÉDITO</option>
+                      <option value="Pagado">PAGADO TOTAL</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 mb-2 block">Medio de Pago</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-sm"
+                      value={formData.medioPago}
+                      onChange={(e) => setFormData(prev => ({ ...prev, medioPago: e.target.value }))}
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Tarjeta">Tarjeta Débito/Crédito</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Crédito / Cuenta Corriente">Crédito / Cta. Corriente</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Monto Abonado ($)</label>
+                    <button 
+                      type="button" 
+                      onClick={() => setFormData(prev => ({ ...prev, montoAbonado: calculatedTotal, estadoPago: 'Pagado' }))}
+                      className="text-[9px] font-black bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full uppercase tracking-wider hover:bg-emerald-100 transition-all"
+                    >
+                      Abonar Total
+                    </button>
+                  </div>
+                  <input 
+                    type="number" 
+                    min="0"
+                    max={calculatedTotal}
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black text-lg"
+                    placeholder="0"
+                    value={formData.montoAbonado || ''}
+                    onChange={(e) => {
+                      const abono = Number(e.target.value);
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        montoAbonado: abono,
+                        estadoPago: abono >= calculatedTotal ? 'Pagado' : 'Pendiente'
+                      }));
+                    }}
+                  />
+                  {formData.montoAbonado < calculatedTotal && (
+                    <p className="text-[10px] font-bold text-red-500 mt-2 ml-2 uppercase tracking-wide">
+                      Saldo Pendiente (Deuda): ${(calculatedTotal - formData.montoAbonado).toLocaleString('es-CL')}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Tarjeta de Resumen y Valor Final */}
+              <div className="bg-slate-900 p-8 rounded-[40px] text-white shadow-2xl flex flex-col justify-between">
+                <div>
+                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2"><DollarSign size={18} className="text-emerald-400" /> Valor Final Venta ($)</label>
+                  <div className="w-full px-8 py-6 bg-slate-800 border-2 border-slate-700 rounded-[28px] text-4xl font-black text-emerald-400">
+                     ${calculatedTotal.toLocaleString()}
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Monto Abonado:</span>
+                    <span className="font-bold text-slate-200">${(formData.montoAbonado || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Saldo Pendiente (Crédito):</span>
+                    <span className="font-bold text-red-400">${(calculatedTotal - (formData.montoAbonado || 0)).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-slate-900 p-10 rounded-[40px] text-white shadow-2xl">
+              <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-4"><DollarSign size={18} className="text-emerald-400" /> Valor Final Venta ($)</label>
+              <div className="w-full px-8 py-6 bg-slate-800 border-2 border-slate-700 rounded-[28px] text-5xl font-black text-emerald-400">
+                 ${calculatedTotal.toLocaleString()}
+              </div>
+            </div>
+          )}
 
           <button type="submit" className={`group w-full py-8 rounded-[32px] text-white font-black text-3xl flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-[0.97] ${mode === 'QUICK' ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-600/30'}`}>
             <Save size={32} /> {mode === 'QUICK' ? 'REGISTRAR LIVE' : 'REGISTRAR VENTA COMPLETA'}

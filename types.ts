@@ -138,6 +138,8 @@ export interface Sale {
   total: number;
   direccion?: string;
   estadoPago: string;
+  medioPago?: string;
+  montoAbonado?: number;
   enviado: boolean;
   conductorFecha?: string;
   comprobante?: string;

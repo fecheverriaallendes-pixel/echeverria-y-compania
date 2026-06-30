@@ -26,7 +26,7 @@ function parseLocalDate(dateStr: string): Date {
 export default function Ventas() {
   const { sales, updateSale, playSound, deleteSale, deleteAllSales, currentUser, stock } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'PENDING' | 'READY'>('PENDING');
+  const [activeTab, setActiveTab] = useState<'PENDING' | 'READY' | 'CREDITS'>('PENDING');
   const [editingSale, setEditingSale] = useState<Sale | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -38,6 +38,7 @@ export default function Ventas() {
   const isAdmin = currentUser?.rol === StaffRole.ADMIN;
 
   const pendingLiveSales = sales.filter(s => s && !s.datosCompletos && s.tipoVenta === SaleType.LIVE && (isAdmin || s.vendedor === currentUser?.nombre));
+  
   const readySales = sales.filter(s => {
     if (!s) return false;
     if (!(s.datosCompletos || s.tipoVenta === SaleType.NORMAL || s.tipoVenta === SaleType.NOTA_VENTA)) return false;
@@ -49,7 +50,22 @@ export default function Ventas() {
     
     return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear;
   });
-  const currentSales = activeTab === 'PENDING' ? pendingLiveSales : readySales;
+
+  const debtorSales = sales.filter(s => {
+    if (!s) return false;
+    if (!(s.datosCompletos || s.tipoVenta === SaleType.NORMAL || s.tipoVenta === SaleType.NOTA_VENTA)) return false;
+    if (!(isAdmin || s.vendedor === currentUser?.nombre)) return false;
+
+    const total = s.total || 0;
+    const abonado = s.montoAbonado !== undefined ? s.montoAbonado : (s.estadoPago === 'Pagado' ? total : 0);
+    return s.estadoPago !== 'Pagado' || abonado < total;
+  });
+
+  const currentSales = activeTab === 'PENDING' 
+    ? pendingLiveSales 
+    : activeTab === 'CREDITS' 
+      ? debtorSales 
+      : readySales;
 
   const normalizeText = (text: string) => 
     text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -89,8 +105,13 @@ export default function Ventas() {
   };
 
   const togglePaymentStatus = (sale: Sale) => {
-    const newStatus = sale.estadoPago === 'Pagado' ? 'Pendiente' : 'Pagado';
-    updateSale(sale.id, { estadoPago: newStatus });
+    const isPaying = sale.estadoPago !== 'Pagado';
+    const newStatus = isPaying ? 'Pagado' : 'Pendiente';
+    const newAbono = isPaying ? sale.total : 0;
+    updateSale(sale.id, { 
+      estadoPago: newStatus,
+      montoAbonado: newAbono
+    });
     playSound('success');
   };
 
@@ -169,18 +190,24 @@ export default function Ventas() {
           <h2 className="text-4xl font-black text-slate-900 tracking-tight uppercase">Historial de Ventas</h2>
           <p className="text-slate-500 italic font-medium">Gestión de clientes y recolección de datos pendientes</p>
         </div>
-        <div className="flex bg-slate-200 p-1.5 rounded-[24px] shadow-inner">
+        <div className="flex flex-wrap bg-slate-200 p-1.5 rounded-[24px] shadow-inner gap-1 sm:gap-0">
           <button 
             onClick={() => { setActiveTab('PENDING'); playSound('click'); }}
-            className={`flex items-center gap-3 px-8 py-3.5 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'PENDING' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-600'}`}
+            className={`flex items-center gap-3 px-6 py-3.5 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'PENDING' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
           >
             <AlertCircle size={18} /> Pendientes Live ({pendingLiveSales.length})
           </button>
           <button 
             onClick={() => { setActiveTab('READY'); playSound('click'); }}
-            className={`flex items-center gap-3 px-8 py-3.5 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'READY' ? 'bg-emerald-500 text-white shadow-xl' : 'text-slate-600'}`}
+            className={`flex items-center gap-3 px-6 py-3.5 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'READY' ? 'bg-emerald-500 text-white shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
           >
             <CheckCircle2 size={18} /> Ventas Completas ({readySales.length})
+          </button>
+          <button 
+            onClick={() => { setActiveTab('CREDITS'); playSound('click'); }}
+            className={`flex items-center gap-3 px-6 py-3.5 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all ${activeTab === 'CREDITS' ? 'bg-red-500 text-white shadow-xl' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            <BadgeDollarSign size={18} /> Créditos / Deudores ({debtorSales.length})
           </button>
         </div>
       </div>
@@ -271,8 +298,35 @@ export default function Ventas() {
                       </span>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-right font-black text-slate-900 text-2xl tracking-tighter">
-                    ${sale.total.toLocaleString()}
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex flex-col items-end">
+                      <span className="font-black text-slate-900 text-2xl tracking-tighter">
+                        ${sale.total.toLocaleString()}
+                      </span>
+                      {(sale.datosCompletos || sale.tipoVenta === SaleType.NORMAL || sale.tipoVenta === SaleType.NOTA_VENTA) && (
+                        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wide mt-1 space-y-0.5 text-right font-sans">
+                          <div className="flex justify-end gap-1">
+                            <span>Abonado:</span>
+                            <span className="text-emerald-600">
+                              ${(sale.montoAbonado !== undefined ? sale.montoAbonado : (sale.estadoPago === 'Pagado' ? sale.total : 0)).toLocaleString()}
+                            </span>
+                          </div>
+                          {((sale.total || 0) - (sale.montoAbonado !== undefined ? sale.montoAbonado : (sale.estadoPago === 'Pagado' ? sale.total : 0))) > 0 && (
+                            <div className="flex justify-end gap-1">
+                              <span>Pendiente:</span>
+                              <span className="text-red-500 font-extrabold">
+                                ${((sale.total || 0) - (sale.montoAbonado !== undefined ? sale.montoAbonado : (sale.estadoPago === 'Pagado' ? sale.total : 0))).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                          {(sale.medioPago || sale.estadoPago === 'Pagado') && (
+                            <div className="text-[9px] text-slate-400 italic font-medium">
+                              M. Pago: {sale.medioPago || 'Efectivo (Def.)'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </td>
                   <td className="px-8 py-6 text-center">
                     <button 
@@ -361,15 +415,84 @@ export default function Ventas() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Estado Pago Actual</label>
-                  <select className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-[24px] font-black text-lg" value={editingSale.estadoPago} onChange={(e) => setEditingSale({...editingSale, estadoPago: e.target.value})}>
-                    <option value="Pendiente">PENDIENTE DE PAGO</option>
-                    <option value="Pagado">YA PAGADO</option>
-                  </select>
+              <div className="bg-slate-50 p-6 rounded-[28px] border-2 border-slate-100 space-y-4">
+                <p className="text-xs font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <BadgeDollarSign size={16} className="text-blue-500" /> Control de Pago y Abonos
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Estado Pago Actual</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-[18px] font-black text-sm" 
+                      value={editingSale.estadoPago} 
+                      onChange={(e) => {
+                        const newStatus = e.target.value;
+                        setEditingSale({
+                          ...editingSale, 
+                          estadoPago: newStatus,
+                          montoAbonado: newStatus === 'Pagado' ? (editingSale.total || 0) : (editingSale.montoAbonado || 0)
+                        });
+                      }}
+                    >
+                      <option value="Pendiente">PENDIENTE DE PAGO</option>
+                      <option value="Pagado">YA PAGADO / COMPLETO</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Medio de Pago</label>
+                    <select 
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-[18px] font-black text-sm" 
+                      value={editingSale.medioPago || 'Efectivo'} 
+                      onChange={(e) => setEditingSale({ ...editingSale, medioPago: e.target.value })}
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Transferencia">Transferencia</option>
+                      <option value="Tarjeta">Tarjeta Débito/Crédito</option>
+                      <option value="Cheque">Cheque</option>
+                      <option value="Crédito / Cuenta Corriente">Crédito / Cta. Corriente</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center px-1">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-sans">Abonado ($)</label>
+                      <button 
+                        type="button" 
+                        onClick={() => setEditingSale({ ...editingSale, montoAbonado: editingSale.total || 0, estadoPago: 'Pagado' })}
+                        className="text-[8px] font-black bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full uppercase hover:bg-emerald-100 transition-all font-sans"
+                      >
+                        Totalizar
+                      </button>
+                    </div>
+                    <input 
+                      type="number" 
+                      min="0"
+                      max={editingSale.total || 0}
+                      className="w-full px-4 py-3 bg-white border-2 border-slate-100 rounded-[18px] font-black text-sm" 
+                      value={editingSale.montoAbonado !== undefined ? editingSale.montoAbonado : 0} 
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setEditingSale({ 
+                          ...editingSale, 
+                          montoAbonado: val,
+                          estadoPago: val >= (editingSale.total || 0) ? 'Pagado' : 'Pendiente'
+                        });
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
+                {((editingSale.total || 0) - (editingSale.montoAbonado || 0)) > 0 && (
+                  <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider text-red-500 bg-red-50/50 border border-red-100 p-2.5 rounded-xl font-sans">
+                    <span>Deuda / Saldo Pendiente:</span>
+                    <span>${((editingSale.total || 0) - (editingSale.montoAbonado || 0)).toLocaleString('es-CL')}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2 md:col-span-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Prioridad Envío</label>
                   <select className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-[24px] font-black text-lg" value={editingSale.juntaCompra} onChange={(e) => setEditingSale({...editingSale, juntaCompra: e.target.value})}>
                     <option value="DESPACHO INMEDIATO">DESPACHO INMEDIATO</option>

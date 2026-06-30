@@ -4,7 +4,7 @@ import { Customer } from '../types';
 import { Phone, Search, Plus, Trash2, Edit2, MessageSquare, Clock } from 'lucide-react';
 
 export default function CRM() {
-  const { customers, addCustomer, updateCustomer, removeCustomer } = useStore();
+  const { customers, addCustomer, updateCustomer, removeCustomer, sales } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -92,11 +92,24 @@ export default function CRM() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCustomers.map(c => (
-          <div key={c.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-            <h3 className="font-black text-lg text-slate-900">{c.nombre}</h3>
-            <p className="text-sm font-bold text-slate-500 mb-2">{c.telefono}</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+        {filteredCustomers.map(c => {
+          const customerSales = sales.filter(s => s && s.cliente && s.cliente.trim().toUpperCase() === c.nombre.trim().toUpperCase());
+          const pendingDebt = customerSales.reduce((acc, s) => {
+            const total = s.total || 0;
+            const abonado = s.montoAbonado !== undefined ? s.montoAbonado : (s.estadoPago === 'Pagado' ? total : 0);
+            return acc + (total - abonado);
+          }, 0);
+
+          return (
+            <div key={c.id} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden">
+              {pendingDebt > 0 && (
+                <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-wider">
+                  Debe ${pendingDebt.toLocaleString('es-CL')}
+                </div>
+              )}
+              <h3 className="font-black text-lg text-slate-900 pr-24 uppercase tracking-tight">{c.nombre}</h3>
+              <p className="text-sm font-bold text-slate-500 mb-2">{c.telefono}</p>
             
             <div className="mt-4 border-t pt-4">
                 <p className="text-xs font-bold text-slate-400 uppercase mb-2">Historial</p>
@@ -115,7 +128,8 @@ export default function CRM() {
               <button onClick={() => removeCustomer(c.id)} className="px-3 py-2 bg-red-100 rounded-lg"><Trash2 size={16} /></button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
