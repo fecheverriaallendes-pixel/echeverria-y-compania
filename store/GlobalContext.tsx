@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Sale, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent } from '../types';
+import { Sale, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig } from '../types';
 import { db, storage } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs, addDoc, query, where, orderBy, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -414,6 +414,8 @@ interface StoreContextType {
   currentUser: { nombre: string; rol: StaffRole } | null;
   settings: { soundEnabled: boolean; soundType?: 'classic' | 'retro' | 'melodic' | 'sci-fi'; cloudUrl: string; lastSync: string | null; dbConnected: boolean; lastError: string | null };
   updateSettings: (newSettings: any) => void;
+  rates: RatesConfig;
+  updateRates: (newRates: Partial<RatesConfig>) => Promise<void>;
   playSound: (type: 'click' | 'success' | 'transition') => void;
   login: (nombre: string, rol: StaffRole) => void;
   logout: () => void;
@@ -533,6 +535,22 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       return { soundType: 'classic', ...parsed };
     }
     return { soundEnabled: true, soundType: 'classic', cloudUrl: '', lastSync: null, dbConnected: false, lastError: null };
+  });
+
+  const [rates, setRates] = useState<RatesConfig>(() => {
+    const saved = safeLocalStorage.getItem('mdf_rates');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      productionRate: 4000,
+      commissionFardoNormal: 3000,
+      commissionFardoPromo: 1500,
+      commissionMedioFardo: 1500,
+      commissionLote: 1000
+    };
   });
 
   const [sales, setSales] = useState<Sale[]>(() => {
@@ -774,9 +792,15 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     let unsubConfig: any;
     let unsubCustomers: any;
     let unsubStockHistory: any;
+    let unsubRates: any;
 
     const initFirebase = async () => {
       try {
+        unsubRates = onSnapshot(doc(db, 'config', 'rates'), (docSnap) => {
+          if (docSnap.exists()) {
+            setRates(prev => ({ ...prev, ...docSnap.data() as RatesConfig }));
+          }
+        });
         unsubSales = onSnapshot(collection(db, 'sales'), (snap) => {
           const salesData = snap.docs.map(d => d.data() as Sale);
           console.log("DEBUG: Retrived sales numbers:", salesData.map(s => s.numeroVenta));
@@ -834,6 +858,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       if (unsubConfig) unsubConfig();
       if (unsubCustomers) unsubCustomers();
       if (unsubStockHistory) unsubStockHistory();
+      if (unsubRates) unsubRates();
     };
   }, []);
 
@@ -846,7 +871,8 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     safeLocalStorage.setItem('mdf_adjustments', JSON.stringify(adjustments));
     safeLocalStorage.setItem('mdf_settings', JSON.stringify(settings));
     safeLocalStorage.setItem('mdf_stock_history', JSON.stringify(stockHistory));
-  }, [sales, stock, staff, purchases, carriers, adjustments, settings, stockHistory]);
+    safeLocalStorage.setItem('mdf_rates', JSON.stringify(rates));
+  }, [sales, stock, staff, purchases, carriers, adjustments, settings, stockHistory, rates]);
 
   const [currentUser, setCurrentUser] = useState<{ nombre: string; rol: StaffRole } | null>(() => {
     const saved = safeSessionStorage.getItem('mdf_session');
@@ -934,10 +960,22 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       id: Math.random().toString(36).substr(2, 9),
       fecha: new Date().toISOString(),
       cantidad,
-      totalPagar: cantidad * 4000
+      totalPagar: cantidad * (rates.productionRate || 4000)
     };
     await setDoc(doc(db, 'produccion', record.id), record);
     playSound('success');
+  };
+
+  const updateRates = async (newRates: Partial<RatesConfig>) => {
+    const updated = { ...rates, ...newRates };
+    setRates(updated);
+    safeLocalStorage.setItem('mdf_rates', JSON.stringify(updated));
+    try {
+      await setDoc(doc(db, 'config', 'rates'), updated);
+      playSound('success');
+    } catch (e) {
+      console.error("Error updating rates in Firebase:", e);
+    }
   };
 
   const deleteProductionRecord = (id: string) => {
@@ -1818,7 +1856,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
 
   return (
     <StoreContext.Provider value={{
-      currentUser, login, logout, settings, updateSettings, playSound,
+      currentUser, login, logout, settings, updateSettings, rates, updateRates, playSound,
       sales, stock, staff, customers, purchases, carriers, adjustments, coupons, addSale, updateSale, markAsSent, updateDispatchStatus, updateDispatchItems, assignCarrier, assignAgency, addCarrier, removeCarrier, addAdjustment, removeAdjustment, addCoupon, redeemCoupon, redeemCouponByCode, deleteCoupon, cheques, addCheque, markChequeAsPaid, deleteCheque, clearAllSales, clearAllStock,
       addStockItem, updateStockItem, togglePromocion, removeStockItem, bulkAddStock, fixDuplicateStock, fixDuplicateStockByName, purgeUnusedStock, resetToMasterStock, addStaff, updateStaff, removeStaff, addCustomer, updateCustomer, removeCustomer, deleteSale, deleteAllSales,
       addPurchase, removePurchase, addAbono, removeAbono, getStats, getReportData, syncWithCloud, pushToCloud, isSyncing, lastSync: settings.lastSync,

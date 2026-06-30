@@ -4,7 +4,7 @@ import { StaffRole } from '../types';
 import { Factory, TrendingUp, Calendar, AlertCircle, Trash2 } from 'lucide-react';
 
 export default function Produccion() {
-  const { productionRecords, addProductionRecord, deleteProductionRecord, currentUser } = useStore();
+  const { productionRecords, addProductionRecord, deleteProductionRecord, currentUser, rates } = useStore();
   const isAdmin = currentUser?.rol === StaffRole.ADMIN;
   const [cantidad, setCantidad] = useState('');
 
@@ -34,8 +34,8 @@ export default function Produccion() {
     return d >= startOfWeek && d <= endOfWeek;
   });
 
-  const totalFardos = weeklyRecords.reduce((acc, r) => acc + r.cantidad, 0);
-  const totalPagar = totalFardos * 4000;
+  const totalUnidades = weeklyRecords.reduce((acc, r) => acc + r.cantidad, 0);
+  const totalPagar = totalUnidades * (rates?.productionRate || 4000);
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -74,7 +74,7 @@ export default function Produccion() {
         <div className="grid grid-cols-2 gap-8 mb-8">
             <div className="bg-slate-50 p-6 rounded-2xl">
                 <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Total Unidades</p>
-                <p className="text-4xl font-black text-slate-800">{totalFardos}</p>
+                <p className="text-4xl font-black text-slate-800">{totalUnidades}</p>
             </div>
             <div className="bg-emerald-50 p-6 rounded-2xl">
                 <p className="text-emerald-500 font-bold uppercase text-[10px] tracking-widest">Total a Pagar</p>

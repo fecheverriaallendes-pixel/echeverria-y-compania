@@ -17,10 +17,12 @@ export default function Configuracion() {
     settings, updateSettings, playSound, syncWithCloud, pushToCloud,
     isSyncing, lastSync, staff, addStaff, updateStaff, removeStaff, sales, stock, purchases,
     clearAllSales, resetToMasterStock, addCarrier, carriers, removeCarrier,
-    fixDuplicateStock, fixDuplicateStockByName, purgeUnusedStock, deleteAllSales
+    fixDuplicateStock, fixDuplicateStockByName, purgeUnusedStock, deleteAllSales,
+    currentUser, rates, updateRates
   } = useStore();
   
-  const [activeTab, setActiveTab] = useState<'RED' | 'STAFF' | 'DB' | 'SISTEMA' | 'CARRIERS'>('RED');
+  const isMasterAdmin = currentUser?.nombre === 'ADMINISTRADOR MAESTRO' || currentUser?.pin === '2024';
+  const [activeTab, setActiveTab] = useState<'RED' | 'STAFF' | 'DB' | 'SISTEMA' | 'CARRIERS' | 'TARIFAS'>('RED');
   const [apiUrl, setApiUrl] = useState(settings.cloudUrl);
   const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
   
@@ -115,7 +117,8 @@ export default function Configuracion() {
             { id: 'STAFF', label: 'Personal', icon: Users },
             { id: 'DB', label: 'Rescate DB', icon: Server },
             { id: 'CARRIERS', label: 'Transportistas', icon: Truck },
-            { id: 'SISTEMA', label: 'Sistema', icon: Activity }
+            { id: 'SISTEMA', label: 'Sistema', icon: Activity },
+            ...(isMasterAdmin ? [{ id: 'TARIFAS', label: 'Tarifas / Comisión', icon: Wallet }] : [])
           ].map(tab => (
             <button 
               key={tab.id}
@@ -584,6 +587,111 @@ export default function Configuracion() {
                        {isSyncing ? 'PURGANDO...' : '3.- PURGA STOCK'}
                      </button>
                    </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PESTAÑA TARIFAS */}
+        {activeTab === 'TARIFAS' && isMasterAdmin && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-right duration-500 font-sans">
+            <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl space-y-8">
+              <div>
+                <span className="bg-amber-50 text-amber-600 border border-amber-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  Módulo de Producción
+                </span>
+                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight mt-3">
+                  Pago por Producción
+                </h3>
+                <p className="text-slate-500 text-xs italic mt-1 font-medium">
+                  Define el valor monetario a pagar a los operarios de bodega por cada unidad procesada.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 block">
+                    Valor por Unidad Reempacada ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold outline-none focus:border-amber-500 focus:bg-white text-lg"
+                    value={rates?.productionRate || 4000}
+                    onChange={(e) => updateRates({ productionRate: Number(e.target.value) })}
+                  />
+                  <span className="text-[10px] text-slate-400 italic font-medium ml-2 block">
+                    Actualmente: ${(rates?.productionRate || 4000).toLocaleString('es-CL')} CLP por unidad.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-10 rounded-[48px] border-2 border-slate-100 shadow-2xl space-y-8">
+              <div>
+                <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                  Módulo de Comisiones
+                </span>
+                <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight mt-3">
+                  Comisiones de Venta
+                </h3>
+                <p className="text-slate-500 text-xs italic mt-1 font-medium">
+                  Configura los montos a pagar por comisiones de venta para cada categoría de producto.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 block">
+                    Comisión Estándar ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-6 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold outline-none focus:border-emerald-500 focus:bg-white"
+                    value={rates?.commissionFardoNormal !== undefined ? rates.commissionFardoNormal : 3000}
+                    onChange={(e) => updateRates({ commissionFardoNormal: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 block">
+                    Comisión Promocional ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-6 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold outline-none focus:border-emerald-500 focus:bg-white"
+                    value={rates?.commissionFardoPromo !== undefined ? rates.commissionFardoPromo : 1500}
+                    onChange={(e) => updateRates({ commissionFardoPromo: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 block">
+                    Comisión Especial ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-6 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold outline-none focus:border-emerald-500 focus:bg-white"
+                    value={rates?.commissionMedioFardo !== undefined ? rates.commissionMedioFardo : 1500}
+                    onChange={(e) => updateRates({ commissionMedioFardo: Number(e.target.value) })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 block">
+                    Comisión Mayorista / Lote ($)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full px-6 py-3 bg-slate-50 border-2 border-slate-100 rounded-xl font-bold outline-none focus:border-emerald-500 focus:bg-white"
+                    value={rates?.commissionLote !== undefined ? rates.commissionLote : 1000}
+                    onChange={(e) => updateRates({ commissionLote: Number(e.target.value) })}
+                  />
                 </div>
               </div>
             </div>

@@ -19,15 +19,15 @@ import {
 import { useStore } from '../store/GlobalContext';
 import { CommissionType, Sale, CommissionAdjustment } from '../types';
 
-const COMMISSION_VALUES: Record<string, number> = {
-  [CommissionType.FARDO_NORMAL]: 3000,
-  [CommissionType.FARDO_PROMO]: 1500,
-  [CommissionType.MEDIO_FARDO]: 1500,
-  [CommissionType.LOTE]: 1000,
-};
-
 export default function Comisiones() {
-  const { sales, staff, adjustments, addAdjustment, removeAdjustment, playSound, stock } = useStore();
+  const { sales, staff, adjustments, addAdjustment, removeAdjustment, playSound, stock, rates } = useStore();
+  
+  const dynamicCommissionValues: Record<string, number> = {
+    [CommissionType.FARDO_NORMAL]: rates?.commissionFardoNormal !== undefined ? rates.commissionFardoNormal : 3000,
+    [CommissionType.FARDO_PROMO]: rates?.commissionFardoPromo !== undefined ? rates.commissionFardoPromo : 1500,
+    [CommissionType.MEDIO_FARDO]: rates?.commissionMedioFardo !== undefined ? rates.commissionMedioFardo : 1500,
+    [CommissionType.LOTE]: rates?.commissionLote !== undefined ? rates.commissionLote : 1000,
+  };
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0);
   const [showAdjustmentForm, setShowAdjustmentForm] = useState(false);
   const [newAdjustment, setNewAdjustment] = useState({
@@ -174,7 +174,7 @@ export default function Comisiones() {
              finalTipo = CommissionType.FARDO_NORMAL;
           }
 
-          const commValue = (COMMISSION_VALUES[finalTipo as string] || 0) * qty;
+          const commValue = (dynamicCommissionValues[finalTipo as string] || 0) * qty;
           
           report[vendedorName].total += commValue;
           report[vendedorName].count += qty;

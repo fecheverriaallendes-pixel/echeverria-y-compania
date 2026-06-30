@@ -65,6 +65,16 @@ export default function Dashboard() {
   const pendingCoupons = coupons.filter(c => !c.used).length;
   const totalPendingValue = coupons.filter(c => !c.used).reduce((acc, c) => acc + c.value, 0);
 
+  const totalCreditosPendientes = useMemo(() => {
+    return sales
+      .filter(s => s.estadoPago !== 'Pagado')
+      .reduce((acc, s) => acc + (s.total - (s.montoAbonado || 0)), 0);
+  }, [sales]);
+
+  const countCreditosPendientes = useMemo(() => {
+    return sales.filter(s => s.estadoPago !== 'Pagado' && (s.total - (s.montoAbonado || 0)) > 0).length;
+  }, [sales]);
+
   const openReport = (type: 'weekly' | 'monthly' | 'custom') => {
     if (type === 'custom') {
       if (!dateRange.start || !dateRange.end) {
@@ -229,6 +239,7 @@ export default function Dashboard() {
         <StatCard title="Falta Despachar" value={stats.faltaDespachar} icon={Truck} color="blue" subtitle="Pedidos listos para salir" />
         <StatCard title="Cupones Pendientes" value={pendingCoupons} icon={Ticket} color="emerald" subtitle="Cupones por canjear" />
         <StatCard title="Dinero en Cupones" value={`$${totalPendingValue.toLocaleString()}`} icon={DollarSign} color="red" subtitle="Valor total pendiente" />
+        <StatCard title="Créditos Pendientes" value={`$${totalCreditosPendientes.toLocaleString('es-CL')}`} icon={DollarSign} color="rose" subtitle={`${countCreditosPendientes} créditos/abonos activos`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -361,6 +372,83 @@ export default function Dashboard() {
             </div>
             <h4 className="text-base font-black text-slate-800 uppercase tracking-tight">¡Felicitaciones! Todo al día</h4>
             <p className="text-slate-400 text-xs mt-2 max-w-md font-medium">No hay ventas con datos incompletos, etiquetas pendientes o pagos sin registrar en el sistema.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Informe de Créditos Pendientes */}
+      <div className="bg-white p-10 rounded-[48px] border border-slate-100 shadow-xl overflow-hidden relative">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 font-sans">
+          <div>
+            <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+              <DollarSign className="text-rose-500 animate-pulse" size={24} /> Informe de Créditos y Deudores Pendientes
+            </h3>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">
+              Listado detallado de clientes con saldos pendientes por compras al crédito o pagos en abonos
+            </p>
+          </div>
+          <span className="px-4 py-2 bg-rose-50 text-rose-600 rounded-full text-[10px] font-black uppercase tracking-widest shrink-0 self-start md:self-auto">
+            ${totalCreditosPendientes.toLocaleString('es-CL')} Total por Cobrar
+          </span>
+        </div>
+
+        {sales.filter(s => s.estadoPago !== 'Pagado' && (s.total - (s.montoAbonado || 0)) > 0).length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse font-sans font-medium">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+                  <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">N° Venta</th>
+                  <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Fecha</th>
+                  <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total Venta</th>
+                  <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Total Abonado</th>
+                  <th className="pb-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Saldo Pendiente</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {sales
+                  .filter(s => s.estadoPago !== 'Pagado' && (s.total - (s.montoAbonado || 0)) > 0)
+                  .sort((a, b) => (b.total - (b.montoAbonado || 0)) - (a.total - (a.montoAbonado || 0)))
+                  .map((sale) => {
+                    const pendingDebt = sale.total - (sale.montoAbonado || 0);
+                    return (
+                      <tr key={sale.id} className="hover:bg-rose-50/20 transition-colors">
+                        <td className="py-4">
+                          <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                            {sale.nombreCliente || 'Cliente Anónimo'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                            Vendedor: {sale.vendedor || 'SISTEMA'}
+                          </p>
+                        </td>
+                        <td className="py-4 text-center font-mono text-xs text-slate-500 font-bold">
+                          #{sale.numeroVenta || 'S/N'}
+                        </td>
+                        <td className="py-4 text-center text-xs font-bold text-slate-500">
+                          {sale.fecha}
+                        </td>
+                        <td className="py-4 text-right font-black text-slate-800 text-sm font-mono">
+                          ${sale.total.toLocaleString('es-CL')}
+                        </td>
+                        <td className="py-4 text-right font-bold text-emerald-600 text-sm font-mono">
+                          ${(sale.montoAbonado || 0).toLocaleString('es-CL')}
+                        </td>
+                        <td className="py-4 text-right font-black text-rose-600 text-sm font-mono">
+                          ${pendingDebt.toLocaleString('es-CL')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-center bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-100 font-sans">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-4">
+              <TrendingUp size={28} />
+            </div>
+            <h4 className="text-base font-black text-slate-800 uppercase tracking-tight">¡Excelente! Sin Cuentas Pendientes</h4>
+            <p className="text-slate-400 text-xs mt-2 max-w-md font-medium">Todos los créditos han sido abonados en su totalidad. No registras clientes deudores.</p>
           </div>
         )}
       </div>

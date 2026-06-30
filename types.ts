@@ -48,10 +48,10 @@ export interface SaleItem {
 }
 
 export enum CommissionType {
-  FARDO_NORMAL = 'Comisión Estándar ($3.000)',
-  FARDO_PROMO = 'Comisión Promoción ($1.500)',
-  MEDIO_FARDO = 'Comisión Especial ($1.500)',
-  LOTE = 'Comisión Mayorista ($1.000)'
+  FARDO_NORMAL = 'Comisión Estándar',
+  FARDO_PROMO = 'Comisión Promoción',
+  MEDIO_FARDO = 'Comisión Especial',
+  LOTE = 'Comisión Mayorista'
 }
 
 export const COMMISSION_VALUES: Record<CommissionType, number> = {
@@ -210,5 +210,13 @@ export interface StockHistoryEvent {
   fecha: string; // ISO timestamp
   vendedor: string;
   observaciones: string;
+}
+
+export interface RatesConfig {
+  productionRate: number;
+  commissionFardoNormal: number;
+  commissionFardoPromo: number;
+  commissionMedioFardo: number;
+  commissionLote: number;
 }
 
