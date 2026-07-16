@@ -44,7 +44,7 @@ export default function CatalogoPublico() {
   const handleWhatsAppInquiry = (item: any) => {
     const message = `Hola! Me interesa el producto: ${item.tipo} (${item.codigo}). ¿Tienen disponibilidad?`;
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/56964035464?text=${encodedMessage}`, '_blank');
+    window.open(`https://wa.me/56984304335?text=${encodedMessage}`, '_blank');
   };
 
   return (
