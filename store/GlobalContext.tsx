@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Sale, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig } from '../types';
+import { Sale, SaleItem, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig } from '../types';
 import { db, storage } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs, addDoc, query, where, orderBy, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -893,6 +893,33 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     playSound('click');
   };
 
+  const getCommissionValueForProduct = (codigo: string, valorUnitario: number): number => {
+    const item = stock.find(i => i.codigo === codigo);
+    if (item && item.comision !== undefined && item.comision !== null && item.comision >= 0) {
+      return item.comision;
+    }
+    
+    // Fallback to Tier-based comision (Category A to G)
+    const price = valorUnitario || (item ? item.precioSugerido : 0);
+    if (price <= 9990) return 500;       // Cat A
+    if (price <= 19990) return 800;      // Cat B
+    if (price <= 39990) return 1500;     // Cat C
+    if (price <= 69990) return 2500;     // Cat D
+    if (price <= 99990) return 3500;     // Cat E
+    if (price <= 199990) return 5000;    // Cat F
+    return 8000;                        // Cat G (Sobre 200.000)
+  };
+
+  const getPremiumBonusForProduct = (codigo: string): number => {
+    const item = stock.find(i => i.codigo === codigo);
+    if (!item) return 0;
+    const name = (item.tipo || '').toLowerCase();
+    if (name.includes('silla')) return 3000;
+    if (name.includes('monitor')) return 5000;
+    if (name.includes('parlante')) return 1000;
+    return 0;
+  };
+
   const addSale = async (saleData: Partial<Sale>) => {
     const now = new Date();
     const items = saleData.items || [];
@@ -901,6 +928,27 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     const total = saleData.tipoVenta === SaleType.NOTA_VENTA 
        ? items.reduce((acc, item) => acc + item.valorUnitario * item.cantidad, 0)
        : (saleData.valorUnitario || 0) * (saleData.cantidad || 0);
+
+    // Calculate commission
+    let totalComision = 0;
+    let enrichedItems: SaleItem[] | undefined = undefined;
+
+    if (saleData.tipoVenta === SaleType.NOTA_VENTA && items && items.length > 0) {
+      enrichedItems = items.map(item => {
+        const itemComm = getCommissionValueForProduct(item.codigoFardo, item.valorUnitario);
+        const itemBonus = getPremiumBonusForProduct(item.codigoFardo);
+        const totalItemComm = (itemComm + itemBonus) * item.cantidad;
+        totalComision += totalItemComm;
+        return {
+          ...item,
+          comisionCalculada: itemComm // Save base commission per unit
+        };
+      });
+    } else if (saleData.codigoFardo) {
+      const itemComm = getCommissionValueForProduct(saleData.codigoFardo, saleData.valorUnitario || 0);
+      const itemBonus = getPremiumBonusForProduct(saleData.codigoFardo);
+      totalComision = (itemComm + itemBonus) * (saleData.cantidad || 1);
+    }
 
     const newSale: Sale = {
       ...saleData,
@@ -916,7 +964,9 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       itemsDespachados: 0,
       tipoDespacho: saleData.tipoDespacho || '',
       timestamp: now.toISOString(),
-      tipoComision: saleData.tipoComision || (saleData.codigoFardo ? calculateCommission(saleData.codigoFardo) : CommissionType.FARDO_NORMAL)
+      tipoComision: saleData.tipoComision || (saleData.codigoFardo ? calculateCommission(saleData.codigoFardo) : CommissionType.FARDO_NORMAL),
+      items: enrichedItems || saleData.items,
+      comisionCalculada: totalComision
     } as Sale;
     
     // Remove undefined values to prevent Firestore errors

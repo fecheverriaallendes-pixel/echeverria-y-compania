@@ -45,6 +45,7 @@ export interface SaleItem {
   valorUnitario: number;
   tipoComision?: CommissionType;
   esManual?: boolean;
+  comisionCalculada?: number; // Comision snapshotted at sale time
 }
 
 export enum CommissionType {
@@ -118,6 +119,7 @@ export interface StockItem {
   promocion?: boolean;
   imagenUrl?: string;
   especificaciones?: string;
+  comision?: number; // Custom commission value per product
 }
 
 export interface Sale {
@@ -160,6 +162,12 @@ export interface Sale {
   impresa?: boolean;
   etiquetador?: string;
   esManual?: boolean;
+
+  // Nuevos campos para cálculo de comisiones
+  devuelta?: boolean;
+  cambio?: boolean;
+  anulada?: boolean;
+  comisionCalculada?: number; // Comision snapshotted at sale time
 }
 
 export interface CommissionAdjustment {

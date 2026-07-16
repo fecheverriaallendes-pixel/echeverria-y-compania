@@ -61,7 +61,8 @@ export default function Stock() {
     categoria: 'ESTANDAR' as any,
     peso: 0,
     imagenUrl: '',
-    especificaciones: ''
+    especificaciones: '',
+    comision: undefined as number | undefined
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -328,7 +329,7 @@ export default function Stock() {
     }
 
     addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
-    setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '' });
+    setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '', comision: undefined });
     setIsAdding(false);
     playSound('success');
   };
@@ -670,18 +671,22 @@ export default function Stock() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Descripción del Producto</label>
                 <input required className="w-full px-7 py-5 bg-slate-50 rounded-[28px] border-2 border-transparent focus:border-emerald-500 outline-none font-bold text-lg" placeholder="Ej: Abrigo Lana Hombre..." value={newBale.tipo} onChange={(e) => setNewBale({...newBale, tipo: e.target.value})}/>
               </div>
-              <div className="grid grid-cols-3 gap-6">
-                <div className="col-span-1 space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Proveedor (IM, CANADA...)</label>
                   <input required className="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl font-bold uppercase focus:border-emerald-500 outline-none" value={newBale.proveedor} onChange={(e) => setNewBale({...newBale, proveedor: e.target.value.toUpperCase()})}/>
                 </div>
-                <div className="col-span-1 space-y-2">
+                <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Costo ($)</label>
                   <input type="number" className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-black text-slate-500 outline-none focus:border-emerald-500 border-2 border-transparent transition-all" value={newBale.precioCosto || ''} onChange={(e) => setNewBale({...newBale, precioCosto: Number(e.target.value)})}/>
                 </div>
-                <div className="col-span-1 space-y-2">
+                <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Precio Venta ($)</label>
                   <input required type="number" className="w-full px-6 py-4 bg-emerald-500 text-white rounded-2xl font-black" value={newBale.precioSugerido || ''} onChange={(e) => setNewBale({...newBale, precioSugerido: Number(e.target.value)})}/>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Comisión Fija ($) - Opcional</label>
+                  <input type="number" placeholder="Automática" className="w-full px-6 py-4 bg-amber-500/10 text-amber-900 border-2 border-amber-500/20 rounded-2xl font-black outline-none focus:border-amber-500 transition-all" value={newBale.comision || ''} onChange={(e) => setNewBale({...newBale, comision: Number(e.target.value) || undefined})}/>
                 </div>
               </div>
 
@@ -844,7 +849,7 @@ export default function Stock() {
                 <input required className="w-full px-7 py-5 bg-slate-50 rounded-[28px] font-black text-xl uppercase outline-none focus:border-blue-500 border-2 border-transparent" placeholder="IM, BETA, CANADA..." value={editingItem.proveedor} onChange={(e) => setEditingItem({...editingItem, proveedor: e.target.value.toUpperCase()})}/>
               </div>
 
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Costo ($)</label>
                   <input type="number" className="w-full px-7 py-5 bg-slate-50 rounded-[28px] font-bold outline-none focus:border-blue-500 border-2 border-transparent" value={editingItem.precioCosto || ''} onChange={(e) => setEditingItem({...editingItem, precioCosto: Number(e.target.value)})}/>
@@ -852,6 +857,10 @@ export default function Stock() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Venta Sugerida ($)</label>
                   <input required type="number" className="w-full px-7 py-5 bg-slate-50 rounded-[28px] font-black text-blue-600 outline-none focus:border-blue-500 border-2 border-transparent" value={editingItem.precioSugerido} onChange={(e) => setEditingItem({...editingItem, precioSugerido: Number(e.target.value)})}/>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Comisión Fija ($) - Opcional</label>
+                  <input type="number" placeholder="Automática" className="w-full px-7 py-5 bg-amber-500/10 text-amber-900 rounded-[28px] font-black outline-none focus:border-amber-500 border-2 border-transparent transition-all" value={editingItem.comision || ''} onChange={(e) => setEditingItem({...editingItem, comision: Number(e.target.value) || undefined})}/>
                 </div>
               </div>
 
