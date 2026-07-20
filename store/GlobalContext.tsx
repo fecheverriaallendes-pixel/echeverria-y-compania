@@ -1236,87 +1236,115 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   const addStockItem = async (item: Omit<StockItem, 'id' | 'disponible'>) => {
-    const code = item.codigo.trim().toUpperCase();
-    const name = item.tipo.trim().toUpperCase();
-    
-    // Check if it already exists locally to alert user
-    const existingCode = stock.find(s => s.codigo.trim().toUpperCase() === code);
-    if (existingCode) {
-      if (!confirm(`El código ${code} ya existe (${existingCode.tipo}). ¿Deseas SOBREESCRIBIR su información con los nuevos datos?`)) {
-        return;
+    try {
+      const code = (item.codigo || '').trim().toUpperCase();
+      
+      // Check if it already exists locally to alert user
+      const existingCode = stock.find(s => (s.codigo || '').trim().toUpperCase() === code);
+      if (existingCode) {
+        if (!confirm(`El código ${code} ya existe (${existingCode.tipo}). ¿Deseas SOBREESCRIBIR su información con los nuevos datos?`)) {
+          return;
+        }
       }
+
+      const newId = code; // ID is the code
+      const rawData = { 
+        ...item, 
+        codigo: code, 
+        id: newId, 
+        disponible: item.stockActual > 0,
+        categoria: item.categoria || 'FARDO'
+      };
+      
+      // Remove undefined values to prevent Firestore errors
+      const cleanData = Object.fromEntries(Object.entries(rawData).filter(([_, v]) => v !== undefined));
+
+      await setDoc(doc(db, 'stock', newId), cleanData);
+
+      await addStockHistoryEvent({
+        productId: code,
+        tipo: 'INGRESO',
+        cantidad: item.stockActual,
+        balanceAntes: existingCode ? existingCode.stockActual : 0,
+        balanceDespues: item.stockActual,
+        vendedor: currentUser?.nombre || 'SISTEMA',
+        observaciones: existingCode ? `Sobreescritura del producto` : `Ingreso inicial de stock`
+      });
+    } catch (e: any) {
+      console.error("Error adding stock item to Firestore:", e);
+      alert("Error al guardar el producto en la base de datos: " + (e.message || e));
+      throw e;
     }
-
-    const newId = code; // ID is the code
-    await setDoc(doc(db, 'stock', newId), { 
-      ...item, 
-      codigo: code, 
-      id: newId, 
-      disponible: item.stockActual > 0,
-      categoria: item.categoria || 'FARDO'
-    });
-
-    await addStockHistoryEvent({
-      productId: code,
-      tipo: 'INGRESO',
-      cantidad: item.stockActual,
-      balanceAntes: existingCode ? existingCode.stockActual : 0,
-      balanceDespues: item.stockActual,
-      vendedor: currentUser?.nombre || 'SISTEMA',
-      observaciones: existingCode ? `Sobreescritura del producto` : `Ingreso inicial de stock`
-    });
   };
 
   const updateStockItem = async (id: string, updatedData: Partial<StockItem>) => {
-    const item = stock.find(i => i.id === id);
-    if (!item) return;
+    try {
+      const item = stock.find(i => i.id === id);
+      if (!item) return;
 
-    let diff = 0;
-    if (updatedData.stockActual !== undefined && updatedData.stockActual !== item.stockActual) {
-      diff = updatedData.stockActual - item.stockActual;
-    }
+      let diff = 0;
+      if (updatedData.stockActual !== undefined && updatedData.stockActual !== item.stockActual) {
+        diff = updatedData.stockActual - item.stockActual;
+      }
 
-    // If code is being changed, we must be careful
-    if (updatedData.codigo) {
-      const newCode = updatedData.codigo.trim().toUpperCase();
-      if (newCode !== item.codigo) {
-        // Create new doc with new ID (code)
-        const newItem = { ...item, ...updatedData, codigo: newCode, id: newCode, disponible: (updatedData.stockActual ?? item.stockActual) > 0 };
-        await setDoc(doc(db, 'stock', newCode), newItem);
-        // Delete old doc
-        await deleteDoc(doc(db, 'stock', id));
-        
+      // If code is being changed, we must be careful
+      if (updatedData.codigo) {
+        const newCode = updatedData.codigo.trim().toUpperCase();
+        if (newCode !== item.codigo) {
+          // Create new doc with new ID (code)
+          const newItem = { ...item, ...updatedData, codigo: newCode, id: newCode, disponible: (updatedData.stockActual ?? item.stockActual) > 0 };
+          const cleanNewItem = Object.fromEntries(Object.entries(newItem).filter(([_, v]) => v !== undefined));
+          await setDoc(doc(db, 'stock', newCode), cleanNewItem);
+          // Delete old doc
+          await deleteDoc(doc(db, 'stock', id));
+          
+          await addStockHistoryEvent({
+            productId: newCode,
+            tipo: 'AJUSTE',
+            cantidad: diff,
+            balanceAntes: item.stockActual,
+            balanceDespues: updatedData.stockActual ?? item.stockActual,
+            vendedor: currentUser?.nombre || 'SISTEMA',
+            observaciones: `Código cambiado de ${item.codigo} a ${newCode}. ${diff !== 0 ? `Stock modificado por ${diff}` : 'Sin cambio de stock'}`
+          });
+          return;
+        }
+      }
+
+      const docData = { ...item, ...updatedData, disponible: (updatedData.stockActual ?? item.stockActual) > 0 };
+      const cleanDocData = Object.fromEntries(Object.entries(docData).filter(([_, v]) => v !== undefined));
+      await setDoc(doc(db, 'stock', id), cleanDocData);
+      
+      if (diff !== 0) {
         await addStockHistoryEvent({
-          productId: newCode,
+          productId: item.codigo,
           tipo: 'AJUSTE',
           cantidad: diff,
           balanceAntes: item.stockActual,
-          balanceDespues: updatedData.stockActual ?? item.stockActual,
+          balanceDespues: updatedData.stockActual!,
           vendedor: currentUser?.nombre || 'SISTEMA',
-          observaciones: `Código cambiado de ${item.codigo} a ${newCode}. ${diff !== 0 ? `Stock modificado por ${diff}` : 'Sin cambio de stock'}`
+          observaciones: `Ajuste manual de stock de ${item.stockActual} a ${updatedData.stockActual}`
         });
-        return;
       }
-    }
-
-    await setDoc(doc(db, 'stock', id), { ...item, ...updatedData, disponible: (updatedData.stockActual ?? item.stockActual) > 0 });
-    
-    if (diff !== 0) {
-      await addStockHistoryEvent({
-        productId: item.codigo,
-        tipo: 'AJUSTE',
-        cantidad: diff,
-        balanceAntes: item.stockActual,
-        balanceDespues: updatedData.stockActual!,
-        vendedor: currentUser?.nombre || 'SISTEMA',
-        observaciones: `Ajuste manual de stock de ${item.stockActual} a ${updatedData.stockActual}`
-      });
+    } catch (e: any) {
+      console.error("Error updating stock item in Firestore:", e);
+      alert("Error al actualizar el producto en la base de datos: " + (e.message || e));
+      throw e;
     }
   };
 
-  const togglePromocion = (id: string) => {
-    const item = stock.find(i => i.id === id);
-    if (item) setDoc(doc(db, 'stock', id), { ...item, promocion: !item.promocion });
+  const togglePromocion = async (id: string) => {
+    try {
+      const item = stock.find(i => i.id === id);
+      if (item) {
+        const docData = { ...item, promocion: !item.promocion };
+        const cleanDocData = Object.fromEntries(Object.entries(docData).filter(([_, v]) => v !== undefined));
+        await setDoc(doc(db, 'stock', id), cleanDocData);
+      }
+    } catch (e: any) {
+      console.error("Error toggling promotion in Firestore:", e);
+      alert("Error al cambiar promoción: " + (e.message || e));
+    }
   };
   
   const calculateCommission = (codigoFardo: string): CommissionType => {
@@ -1346,34 +1374,42 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
   };
 
   const bulkAddStock = async (items: Omit<StockItem, 'id' | 'disponible'>[]) => {
-    let batch = writeBatch(db);
-    let count = 0;
-    
-    for (const i of items) {
-      const code = i.codigo.trim().toUpperCase();
-      const newId = code;
-      batch.set(doc(db, 'stock', newId), { ...i, codigo: code, id: newId, disponible: i.stockActual > 0 });
-      count++;
+    try {
+      let batch = writeBatch(db);
+      let count = 0;
       
-      await addStockHistoryEvent({
-        productId: code,
-        tipo: 'CARGA_MASIVA',
-        cantidad: i.stockActual,
-        balanceAntes: 0,
-        balanceDespues: i.stockActual,
-        vendedor: currentUser?.nombre || 'SISTEMA',
-        observaciones: `Carga masiva CSV`
-      });
+      for (const i of items) {
+        const code = (i.codigo || '').trim().toUpperCase();
+        if (!code) continue;
+        const newId = code;
+        const stockData = { ...i, codigo: code, id: newId, disponible: i.stockActual > 0 };
+        const cleanStockData = Object.fromEntries(Object.entries(stockData).filter(([_, v]) => v !== undefined));
+        batch.set(doc(db, 'stock', newId), cleanStockData);
+        count++;
+        
+        await addStockHistoryEvent({
+          productId: code,
+          tipo: 'CARGA_MASIVA',
+          cantidad: i.stockActual,
+          balanceAntes: 0,
+          balanceDespues: i.stockActual,
+          vendedor: currentUser?.nombre || 'SISTEMA',
+          observaciones: `Carga masiva CSV`
+        });
 
-      if (count === 400) {
-        await batch.commit();
-        batch = writeBatch(db);
-        count = 0;
+        if (count === 400) {
+          await batch.commit();
+          batch = writeBatch(db);
+          count = 0;
+        }
       }
-    }
 
-    if (count > 0) await batch.commit();
-    alert(`Carga masiva completada. Se procesaron ${items.length} productos.`);
+      if (count > 0) await batch.commit();
+      alert(`Carga masiva completada. Se procesaron ${items.length} productos.`);
+    } catch (e: any) {
+      console.error("Error in bulkAddStock in Firestore:", e);
+      alert("Error en la carga masiva: " + (e.message || e));
+    }
   };
 
   const fixDuplicateStock = async () => {

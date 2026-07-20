@@ -306,37 +306,53 @@ export default function Stock() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canModify) return;
+    if (!canModify) {
+      showFeedback('ERROR: No tienes permisos para registrar entradas en el inventario.', 'error');
+      playSound('error');
+      return;
+    }
     
-    let finalCodigo = newBale.codigo;
-    if (!finalCodigo) {
-        const existingCodes = stock.map(s => s.codigo).filter(c => c.startsWith('MDF-'));
-        let nextNum = 1;
-        if(existingCodes.length > 0) {
-            const numbers = existingCodes.map(c => parseInt(c.split('-')[1]) || 0);
-            nextNum = Math.max(...numbers) + 1;
-        }
-        finalCodigo = `MDF-${String(nextNum).padStart(3, '0')}`;
-    }
+    try {
+      let finalCodigo = newBale.codigo;
+      if (!finalCodigo) {
+          const existingCodes = stock.map(s => s.codigo || '').filter(c => c.startsWith('MDF-'));
+          let nextNum = 1;
+          if(existingCodes.length > 0) {
+              const numbers = existingCodes.map(c => parseInt(c.split('-')[1]) || 0);
+              nextNum = Math.max(...numbers) + 1;
+          }
+          finalCodigo = `MDF-${String(nextNum).padStart(3, '0')}`;
+      }
 
-    const codeExists = stock.some(s => s.codigo.toUpperCase() === finalCodigo.toUpperCase());
-    if (codeExists) {
-        showFeedback(`ERROR: El código ${finalCodigo} ya está en uso. Por favor ingresa uno diferente.`, "error");
-        playSound('error');
-        return;
-    }
+      const codeExists = stock.some(s => (s.codigo || '').toUpperCase() === finalCodigo.toUpperCase());
+      if (codeExists) {
+          showFeedback(`ERROR: El código ${finalCodigo} ya está en uso. Por favor ingresa uno diferente.`, "error");
+          playSound('error');
+          return;
+      }
 
-    addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
-    setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '', comision: undefined });
-    setIsAdding(false);
-    playSound('success');
+      await addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
+      setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '', comision: undefined });
+      setIsAdding(false);
+      playSound('success');
+      showFeedback('Producto ingresado correctamente al inventario.', 'success');
+    } catch (err: any) {
+      console.error("Error in handleSubmit stock item:", err);
+      playSound('error');
+      showFeedback('Error al guardar el producto. Inténtalo de nuevo.', 'error');
+    }
   };
 
-  const handleUpdate = (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingItem || !canModify) return;
+    if (!editingItem) return;
+    if (!canModify) {
+      showFeedback('ERROR: No tienes permisos para modificar el inventario.', 'error');
+      playSound('error');
+      return;
+    }
     
     const conflict = stock.find(s => s.id !== editingItem.id && (s.codigo || '').toUpperCase() === (editingItem.codigo || '').toUpperCase());
     if (conflict) {
@@ -345,13 +361,24 @@ export default function Stock() {
       return;
     }
 
-    updateStockItem(editingItem.id, { ...editingItem, proveedor: (editingItem.proveedor || '').toUpperCase() });
-    setEditingItem(null);
-    playSound('success');
+    try {
+      await updateStockItem(editingItem.id, { ...editingItem, proveedor: (editingItem.proveedor || '').toUpperCase() });
+      setEditingItem(null);
+      playSound('success');
+      showFeedback('Producto actualizado correctamente.', 'success');
+    } catch (err: any) {
+      playSound('error');
+      showFeedback('Error al actualizar el producto. Inténtalo de nuevo.', 'error');
+    }
   };
 
   const handleDelete = () => {
-    if (!deletingId || !canModify) return;
+    if (!deletingId) return;
+    if (!canModify) {
+      showFeedback('ERROR: No tienes permisos para eliminar productos del inventario.', 'error');
+      playSound('error');
+      return;
+    }
     removeStockItem(deletingId);
     setDeletingId(null);
     playSound('click');
