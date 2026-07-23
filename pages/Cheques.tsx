@@ -66,7 +66,8 @@ export default function Cheques() {
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const formatFecha = (fecha: string) => {
-    const [y, m, d] = fecha.split('-');
+    const datePart = fecha.split('T')[0].split(' ')[0];
+    const [y, m, d] = datePart.split('-');
     return `${d}/${m}/${y}`;
   };
 

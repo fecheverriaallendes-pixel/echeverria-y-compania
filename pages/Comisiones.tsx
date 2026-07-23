@@ -172,14 +172,15 @@ export default function Comisiones() {
       if (!s || !s.fecha || typeof s.fecha !== 'string') return false;
       
       try {
+        const datePart = s.fecha.split('T')[0].split(' ')[0];
         let saleDate: Date;
-        if (s.fecha.includes('/')) {
-          const parts = s.fecha.split('/');
+        if (datePart.includes('/')) {
+          const parts = datePart.split('/');
           if (parts.length !== 3) return false;
           const [d, m, y] = parts;
           saleDate = new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);
         } else {
-          const parts = s.fecha.split('-');
+          const parts = datePart.split('-');
           if (parts.length !== 3) return false;
           const [y, m, d] = parts;
           saleDate = new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);
@@ -200,14 +201,15 @@ export default function Comisiones() {
     
     return adjustments.filter(a => {
       try {
+        const datePart = a.fecha.split('T')[0].split(' ')[0];
         let adjDate: Date;
-        if (a.fecha.includes('/')) {
-          const parts = a.fecha.split('/');
+        if (datePart.includes('/')) {
+          const parts = datePart.split('/');
           if (parts.length !== 3) return false;
           const [d, m, y] = parts;
           adjDate = new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);
         } else {
-          const parts = a.fecha.split('-');
+          const parts = datePart.split('-');
           if (parts.length !== 3) return false;
           const [y, m, d] = parts;
           adjDate = new Date(Number(y), Number(m) - 1, Number(d), 12, 0, 0);

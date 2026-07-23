@@ -8,11 +8,12 @@ import { Invoice } from '../components/Invoice';
 
 function parseLocalDate(dateStr: string): Date {
   if (!dateStr) return new Date();
-  const parts = dateStr.split('-');
+  const datePart = dateStr.split('T')[0].split(' ')[0];
+  const parts = datePart.split('-');
   if (parts.length === 3) {
     return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
   }
-  const slashParts = dateStr.split('/');
+  const slashParts = datePart.split('/');
   if (slashParts.length === 3) {
     if (slashParts[0].length === 4) {
       return new Date(parseInt(slashParts[0], 10), parseInt(slashParts[1], 10) - 1, parseInt(slashParts[2], 10));
