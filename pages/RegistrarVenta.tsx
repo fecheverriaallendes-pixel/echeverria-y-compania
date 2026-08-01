@@ -73,7 +73,16 @@ export default function RegistrarVenta() {
     const handleItemCodeChange = (code: string, isNotaVenta: boolean) => {
     const uppercaseCode = code.toUpperCase();
     const foundItem = stock.find(s => s.codigo === uppercaseCode);
-    const price = foundItem ? foundItem.precioSugerido : 0;
+    const qty = isNotaVenta ? newItem.cantidad : (formData.cantidad || 1);
+    let price = 0;
+    if (foundItem) {
+      const minMayorista = foundItem.minUnidadesMayorista || 5;
+      if (foundItem.precioMayorista && foundItem.precioMayorista > 0 && qty >= minMayorista) {
+        price = foundItem.precioMayorista;
+      } else {
+        price = foundItem.precioSugerido;
+      }
+    }
     const esManual = !foundItem;
     
     // Determine commission type correctly
@@ -290,7 +299,18 @@ export default function RegistrarVenta() {
                 <div>
                   <div className="flex flex-wrap gap-2">
                       <input list="stock-suggestions" type="text" className="w-[120px] px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none" placeholder="CODIGO" value={newItem.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, true)}/>
-                      <input type="number" className="w-16 px-2 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none" placeholder="CANT" value={newItem.cantidad} onChange={(e) => setNewItem({...newItem, cantidad: Number(e.target.value)})}/>
+                      <input type="number" min="1" className="w-16 px-2 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none" placeholder="CANT" value={newItem.cantidad} onChange={(e) => {
+                        const newQty = Number(e.target.value);
+                        const found = stock.find(s => s.codigo === newItem.codigoFardo.trim().toUpperCase());
+                        let price = newItem.valorUnitario;
+                        if (found) {
+                          const minM = found.minUnidadesMayorista || 5;
+                          if (found.precioMayorista && found.precioMayorista > 0) {
+                            price = newQty >= minM ? found.precioMayorista : found.precioSugerido;
+                          }
+                        }
+                        setNewItem({...newItem, cantidad: newQty, valorUnitario: price});
+                      }}/>
                       <input type="number" className="w-24 px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none" placeholder="VALOR" value={newItem.valorUnitario} onChange={(e) => setNewItem({...newItem, valorUnitario: Number(e.target.value)})}/>
                       <select className="px-4 py-4 bg-slate-50 border-2 border-slate-100 rounded-[20px] font-black outline-none text-[10px]" value={newItem.tipoComision} onChange={(e) => setNewItem({...newItem, tipoComision: e.target.value as CommissionType})}>
                           <option value={CommissionType.FARDO_NORMAL}>ESTÁNDAR</option>

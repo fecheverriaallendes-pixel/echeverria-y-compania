@@ -42,7 +42,11 @@ export default function CatalogoPublico() {
   }, [availableStock, searchTerm, activeFilter]);
 
   const handleWhatsAppInquiry = (item: any) => {
-    const message = `Hola! Me interesa el producto: ${item.tipo} (${item.codigo}). ¿Tienen disponibilidad?`;
+    let message = `Hola! Me interesa el producto: ${item.tipo} (${item.codigo}).`;
+    if (item.precioMayorista && item.precioMayorista > 0) {
+      message += ` Precio detalle: $${item.precioSugerido?.toLocaleString('es-CL')}, Mayorista: $${item.precioMayorista?.toLocaleString('es-CL')} (desde ${item.minUnidadesMayorista || 5} uds).`;
+    }
+    message += ` ¿Tienen disponibilidad?`;
     const encodedMessage = encodeURIComponent(message);
     window.open(`https://wa.me/56984304335?text=${encodedMessage}`, '_blank');
   };
@@ -135,17 +139,32 @@ export default function CatalogoPublico() {
                     </div>
                   )}
 
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Precio Sugerido</p>
-                      <p className="text-3xl font-black text-slate-900 tracking-tighter">${item.precioSugerido.toLocaleString('es-CL')}</p>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-end justify-between border-t border-slate-100 pt-3">
+                      <div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Precio Detalle</p>
+                        <p className="text-2xl font-black text-slate-900 tracking-tighter">${item.precioSugerido.toLocaleString('es-CL')}</p>
+                      </div>
+                      <div className={`flex flex-col items-center px-4 py-2 rounded-2xl ${
+                        item.stockActual > 5 ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'
+                      }`}>
+                        <span className="text-xl font-black leading-none">{item.stockActual}</span>
+                        <span className="text-[8px] font-black uppercase mt-1">Disponibles</span>
+                      </div>
                     </div>
-                    <div className={`flex flex-col items-center px-4 py-2 rounded-2xl ${
-                      item.stockActual > 5 ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'
-                    }`}>
-                      <span className="text-xl font-black leading-none">{item.stockActual}</span>
-                      <span className="text-[8px] font-black uppercase mt-1">Disponibles</span>
-                    </div>
+
+                    {!!item.precioMayorista && item.precioMayorista > 0 && (
+                      <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 flex items-center justify-between">
+                        <div>
+                          <span className="inline-block text-[9px] font-black uppercase tracking-wider text-amber-800">
+                            🔥 Precio Mayorista (desde {item.minUnidadesMayorista || 5} uds)
+                          </span>
+                          <p className="text-xl font-black text-amber-900 tracking-tight">
+                            ${item.precioMayorista.toLocaleString('es-CL')} <span className="text-xs font-bold text-amber-700">c/u</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 

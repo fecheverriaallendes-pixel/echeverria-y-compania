@@ -45,6 +45,30 @@ export default function Comisiones() {
   const [expandedSeller, setExpandedSeller] = useState<string | null>(null);
   const [showRulesConfig, setShowRulesConfig] = useState(false);
   
+  // Custom states for commission requirements
+  const [requirePayment, setRequirePayment] = useState(() => {
+    const saved = localStorage.getItem('mdf_require_payment');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [requireDelivery, setRequireDelivery] = useState(() => {
+    const saved = localStorage.getItem('mdf_require_delivery');
+    return saved !== null ? saved === 'true' : false; // Defaults to false so paid but preparing sales immediately count
+  });
+
+  const handleToggleRequirePayment = () => {
+    const newVal = !requirePayment;
+    setRequirePayment(newVal);
+    localStorage.setItem('mdf_require_payment', String(newVal));
+    playSound('click');
+  };
+
+  const handleToggleRequireDelivery = () => {
+    const newVal = !requireDelivery;
+    setRequireDelivery(newVal);
+    localStorage.setItem('mdf_require_delivery', String(newVal));
+    playSound('click');
+  };
+  
   // Custom states for manual adjustment
   const [newAdjustment, setNewAdjustment] = useState({
     vendedor: '',
@@ -104,7 +128,7 @@ export default function Comisiones() {
     return matchedRule ? matchedRule.bonus : 0;
   };
 
-  // Cálculo de rango de fecha (Lunes a Sábado)
+  // Cálculo de rango de fecha (Lunes a Domingo)
   const weekRange = useMemo(() => {
     try {
       const now = new Date();
@@ -122,7 +146,7 @@ export default function Comisiones() {
       start.setHours(0, 0, 0, 0);
       
       const end = new Date(start);
-      end.setDate(start.getDate() + 5); // Lunes + 5 días = Sábado
+      end.setDate(start.getDate() + 6); // Lunes + 6 días = Domingo
       end.setHours(23, 59, 59, 999);
       
       return { start, end };
@@ -293,15 +317,15 @@ export default function Comisiones() {
         };
       }
 
-      const isPaid = (s.estadoPago || '').toLowerCase() === 'pagado';
-      const isDelivered = s.estadoDespacho === 'Entregado';
+      const isPaid = (s.estadoPago || '').trim().toLowerCase() === 'pagado';
+      const isDelivered = (s.estadoDespacho || '').trim().toLowerCase() === 'entregado';
       const isReturned = !!s.devuelta;
       const isExchanged = !!s.cambio;
       const isCancelled = !!s.anulada;
 
       const ineligibleReasons: string[] = [];
-      if (!isPaid) ineligibleReasons.push('Cliente no ha pagado completamente');
-      if (!isDelivered) ineligibleReasons.push('Pedido no se ha entregado');
+      if (requirePayment && !isPaid) ineligibleReasons.push('Cliente no ha pagado completamente');
+      if (requireDelivery && !isDelivered) ineligibleReasons.push('Pedido no se ha entregado');
       if (isReturned) ineligibleReasons.push('Hubo devolución de producto');
       if (isExchanged) ineligibleReasons.push('Hubo cambio de producto');
       if (isCancelled) ineligibleReasons.push('Venta se encuentra anulada');
@@ -381,7 +405,7 @@ export default function Comisiones() {
     });
 
     return Object.values(report).sort((a, b) => b.totalAPagar - a.totalAPagar);
-  }, [weeklySales, weeklyAdjustments, stock, staff]);
+  }, [weeklySales, weeklyAdjustments, stock, staff, requirePayment, requireDelivery]);
 
   // Aggregate stats
   const totalPayrollCost = useMemo(() => 
@@ -518,6 +542,47 @@ export default function Comisiones() {
           </div>
         </div>
       )}
+
+      {/* Commission Requirements Toggles */}
+      <div className="bg-white p-6 border-2 border-slate-100 rounded-[32px] shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6 no-print">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+            <Settings size={20} />
+          </div>
+          <div>
+            <h4 className="font-black text-slate-900 uppercase tracking-tight text-sm">Condiciones para Liquidar Comisiones</h4>
+            <p className="text-xs text-slate-400 font-medium">Define qué requisitos deben cumplir las ventas para pagar comisiones.</p>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+          {/* Require Payment Toggle */}
+          <button
+            onClick={handleToggleRequirePayment}
+            className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+              requirePayment 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm' 
+                : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            {requirePayment ? <ToggleRight size={20} className="text-emerald-600" /> : <ToggleLeft size={20} className="text-slate-300" />}
+            <span>Exigir Pago ({requirePayment ? 'Activado' : 'Desactivado'})</span>
+          </button>
+
+          {/* Require Delivery Toggle */}
+          <button
+            onClick={handleToggleRequireDelivery}
+            className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border ${
+              requireDelivery 
+                ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' 
+                : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            {requireDelivery ? <ToggleRight size={20} className="text-blue-600" /> : <ToggleLeft size={20} className="text-slate-300" />}
+            <span>Exigir Entrega ({requireDelivery ? 'Activado' : 'Desactivado'})</span>
+          </button>
+        </div>
+      </div>
 
       {/* Manual adjustments / discount & bonus manager form */}
       <div className="no-print">

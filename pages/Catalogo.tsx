@@ -65,7 +65,12 @@ const ProductRow: React.FC<{ item: StockItem }> = ({ item }) => (
       </div>
     </td>
     <td className="px-2 py-1.5 text-right font-black text-slate-900 text-xs">
-      ${item.precioSugerido.toLocaleString('es-CL')}
+      <div>${item.precioSugerido.toLocaleString('es-CL')}</div>
+      {!!item.precioMayorista && item.precioMayorista > 0 && (
+        <div className="text-[8px] text-amber-700 font-black leading-none mt-0.5">
+          May (≥{item.minUnidadesMayorista || 5}): ${item.precioMayorista.toLocaleString('es-CL')}
+        </div>
+      )}
     </td>
     <td className="px-2 py-1.5 text-center">
       <span className={`font-black text-[10px] ${item.stockActual < 5 ? 'text-red-600' : 'text-slate-900'}`}>
@@ -417,8 +422,17 @@ export default function Catalogo() {
                    <div className="px-4 py-1.5 bg-emerald-100 text-emerald-600 rounded-full text-[10px] font-black uppercase tracking-widest mb-6 print:mb-2 print:text-[8px] print:py-0.5">
                      {item.proveedor}
                    </div>
-                   <div className="text-5xl font-black text-slate-900 tracking-tighter mb-6 print:text-2xl print:mb-2">
-                     ${item.precioSugerido.toLocaleString('es-CL')}
+                   <div className="flex flex-col items-center mb-6 print:mb-2 w-full">
+                     <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Precio Detalle</span>
+                     <div className="text-4xl font-black text-slate-900 tracking-tighter print:text-2xl">
+                       ${item.precioSugerido.toLocaleString('es-CL')}
+                     </div>
+                     {!!item.precioMayorista && item.precioMayorista > 0 && (
+                       <div className="mt-2 w-full px-4 py-2 bg-amber-50 text-amber-900 rounded-2xl border border-amber-200 font-black text-xs flex flex-col items-center">
+                         <span className="text-[9px] uppercase tracking-wider text-amber-700 font-bold">Precio Mayorista (≥{item.minUnidadesMayorista || 5} uds)</span>
+                         <span className="text-lg tracking-tight font-black text-amber-800">${item.precioMayorista.toLocaleString('es-CL')} c/u</span>
+                       </div>
+                     )}
                    </div>
                    {item.especificaciones && (
                      <div className="w-full text-slate-500 text-xs italic mb-4 max-h-[80px] overflow-y-auto bg-slate-50 p-2.5 rounded-2xl border border-slate-100/50 text-left">

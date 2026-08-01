@@ -111,6 +111,8 @@ export interface StockItem {
   proveedor: string; 
   precioCosto: number;
   precioSugerido: number;
+  precioMayorista?: number;
+  minUnidadesMayorista?: number; // Minimum quantity for wholesale price (default: 5)
   stockActual: number; 
   disponible: boolean;
   unidad: 'UNIDAD' | 'PIEZA' | 'CAJA' | 'PACK' | 'SET' | string;

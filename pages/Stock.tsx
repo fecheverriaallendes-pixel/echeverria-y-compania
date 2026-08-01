@@ -57,6 +57,8 @@ export default function Stock() {
     proveedor: '', 
     precioCosto: 0, 
     precioSugerido: 0, 
+    precioMayorista: 0,
+    minUnidadesMayorista: 5,
     stockActual: 1,
     unidad: 'UNIDAD' as any,
     categoria: 'ESTANDAR' as any,
@@ -265,7 +267,7 @@ export default function Stock() {
   }, [stock, searchTerm, providerFilter, categoryFilter]);
 
   const downloadFormat = () => {
-    const csvContent = "codigo,tipo,proveedor,precioCosto,precioSugerido,stockActual,unidad\nF-101,Polerones Premium,Bale Center,100000,150000,10,FARDO\nU-102,Jeans Unitario,USA Direct,8000,15000,50,PIEZA";
+    const csvContent = "codigo,tipo,proveedor,precioCosto,precioSugerido,precioMayorista,minUnidadesMayorista,stockActual,unidad\nF-101,Polerones Premium,Bale Center,100000,150000,120000,5,10,FARDO\nU-102,Jeans Unitario,USA Direct,8000,15000,11000,5,50,PIEZA";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -288,7 +290,7 @@ export default function Stock() {
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-        const [codigo, tipo, proveedor, costo, precio, stockCant, unidad] = line.split(',');
+        const [codigo, tipo, proveedor, costo, precio, pMayorista, minMayorista, stockCant, unidad] = line.split(',');
         if (codigo && tipo && !isNaN(Number(precio))) {
           items.push({
             codigo: codigo.trim().toUpperCase(),
@@ -296,6 +298,8 @@ export default function Stock() {
             proveedor: proveedor?.trim().toUpperCase() || 'GENERAL',
             precioCosto: Number(costo) || 0,
             precioSugerido: Number(precio),
+            precioMayorista: Number(pMayorista) || undefined,
+            minUnidadesMayorista: Number(minMayorista) || 5,
             stockActual: Number(stockCant) || 1,
             unidad: (unidad?.trim().toUpperCase() === 'PIEZA' ? 'PIEZA' : 'FARDO')
           });
@@ -335,7 +339,7 @@ export default function Stock() {
       }
 
       await addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
-      setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '', comision: undefined });
+      setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, precioMayorista: 0, minUnidadesMayorista: 5, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '', comision: undefined });
       setIsAdding(false);
       playSound('success');
       showFeedback('Producto ingresado correctamente al inventario.', 'success');
@@ -566,8 +570,17 @@ export default function Stock() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-6 text-right font-black text-slate-900 text-xl tracking-tighter">
-                    ${item.precioSugerido.toLocaleString()}
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex flex-col items-end">
+                      <span className="font-black text-slate-900 text-xl tracking-tighter">
+                        ${item.precioSugerido.toLocaleString()}
+                      </span>
+                      {!!item.precioMayorista && item.precioMayorista > 0 && (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                          May ({item.minUnidadesMayorista || 5}+ uds): ${item.precioMayorista.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-8 py-6 text-center">
                     <div className={`inline-flex flex-col items-center justify-center w-14 h-14 rounded-2xl ${item.stockActual > 3 ? 'bg-emerald-50 text-emerald-600' : item.stockActual > 0 ? 'bg-amber-50 text-amber-600 animate-pulse border border-amber-200' : 'bg-red-50 text-red-600'}`}>
@@ -709,12 +722,42 @@ export default function Stock() {
                   <input type="number" className="w-full px-6 py-4 bg-slate-50 rounded-2xl font-black text-slate-500 outline-none focus:border-emerald-500 border-2 border-transparent transition-all" value={newBale.precioCosto || ''} onChange={(e) => setNewBale({...newBale, precioCosto: Number(e.target.value)})}/>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Precio Venta ($)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Precio Detalle ($)</label>
                   <input required type="number" className="w-full px-6 py-4 bg-emerald-500 text-white rounded-2xl font-black" value={newBale.precioSugerido || ''} onChange={(e) => setNewBale({...newBale, precioSugerido: Number(e.target.value)})}/>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Comisión Fija ($) - Opcional</label>
                   <input type="number" placeholder="Automática" className="w-full px-6 py-4 bg-amber-500/10 text-amber-900 border-2 border-amber-500/20 rounded-2xl font-black outline-none focus:border-amber-500 transition-all" value={newBale.comision || ''} onChange={(e) => setNewBale({...newBale, comision: Number(e.target.value) || undefined})}/>
+                </div>
+              </div>
+
+              {/* Opción Precio Mayorista */}
+              <div className="p-6 bg-amber-500/10 rounded-[28px] border-2 border-amber-500/20 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Boxes className="text-amber-600" size={20} />
+                  <span className="font-black text-xs uppercase tracking-wider text-amber-900">Configuración Precio Mayorista (Opcional)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-amber-900/70 uppercase tracking-widest ml-2 block">Precio Mayorista ($)</label>
+                    <input 
+                      type="number" 
+                      placeholder="Ej: 80000"
+                      className="w-full px-6 py-4 bg-white border-2 border-amber-200 rounded-2xl font-black text-amber-700 focus:border-amber-500 outline-none" 
+                      value={newBale.precioMayorista || ''} 
+                      onChange={(e) => setNewBale({...newBale, precioMayorista: Number(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-amber-900/70 uppercase tracking-widest ml-2 block">Mínimo Unidades Mayorista (Por defecto: 5)</label>
+                    <input 
+                      type="number" 
+                      placeholder="5"
+                      className="w-full px-6 py-4 bg-white border-2 border-amber-200 rounded-2xl font-black text-slate-800 focus:border-amber-500 outline-none" 
+                      value={newBale.minUnidadesMayorista || 5} 
+                      onChange={(e) => setNewBale({...newBale, minUnidadesMayorista: Number(e.target.value) || 5})}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -883,12 +926,42 @@ export default function Stock() {
                   <input type="number" className="w-full px-7 py-5 bg-slate-50 rounded-[28px] font-bold outline-none focus:border-blue-500 border-2 border-transparent" value={editingItem.precioCosto || ''} onChange={(e) => setEditingItem({...editingItem, precioCosto: Number(e.target.value)})}/>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Venta Sugerida ($)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Precio Detalle ($)</label>
                   <input required type="number" className="w-full px-7 py-5 bg-slate-50 rounded-[28px] font-black text-blue-600 outline-none focus:border-blue-500 border-2 border-transparent" value={editingItem.precioSugerido} onChange={(e) => setEditingItem({...editingItem, precioSugerido: Number(e.target.value)})}/>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Comisión Fija ($) - Opcional</label>
                   <input type="number" placeholder="Automática" className="w-full px-7 py-5 bg-amber-500/10 text-amber-900 rounded-[28px] font-black outline-none focus:border-amber-500 border-2 border-transparent transition-all" value={editingItem.comision || ''} onChange={(e) => setEditingItem({...editingItem, comision: Number(e.target.value) || undefined})}/>
+                </div>
+              </div>
+
+              {/* Opción Precio Mayorista */}
+              <div className="p-6 bg-amber-500/10 rounded-[28px] border-2 border-amber-500/20 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Boxes className="text-amber-600" size={20} />
+                  <span className="font-black text-xs uppercase tracking-wider text-amber-900">Configuración Precio Mayorista (Opcional)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-amber-900/70 uppercase tracking-widest ml-2 block">Precio Mayorista ($)</label>
+                    <input 
+                      type="number" 
+                      placeholder="Ej: 80000"
+                      className="w-full px-6 py-4 bg-white border-2 border-amber-200 rounded-2xl font-black text-amber-700 focus:border-amber-500 outline-none" 
+                      value={editingItem.precioMayorista || ''} 
+                      onChange={(e) => setEditingItem({...editingItem, precioMayorista: Number(e.target.value) || 0})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-amber-900/70 uppercase tracking-widest ml-2 block">Mínimo Unidades Mayorista (Por defecto: 5)</label>
+                    <input 
+                      type="number" 
+                      placeholder="5"
+                      className="w-full px-6 py-4 bg-white border-2 border-amber-200 rounded-2xl font-black text-slate-800 focus:border-amber-500 outline-none" 
+                      value={editingItem.minUnidadesMayorista || 5} 
+                      onChange={(e) => setEditingItem({...editingItem, minUnidadesMayorista: Number(e.target.value) || 5})}
+                    />
+                  </div>
                 </div>
               </div>
 
