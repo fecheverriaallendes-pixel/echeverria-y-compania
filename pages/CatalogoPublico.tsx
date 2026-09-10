@@ -32,7 +32,7 @@ interface CartItem {
   quantity: number;
 }
 
-type CategoryTab = 'TODOS' | 'FARDOS' | 'LOTES' | 'MAYORISTA' | 'OFERTAS';
+type CategoryTab = 'TODOS' | 'PRODUCTOS' | 'LOTES' | 'MAYORISTA' | 'OFERTAS';
 type SortOption = 'default' | 'price-asc' | 'price-desc' | 'name-asc' | 'stock-desc';
 
 export default function CatalogoPublico() {
@@ -104,11 +104,11 @@ export default function CatalogoPublico() {
       }
 
       // Tab Category filter
-      if (activeTab === 'FARDOS') {
-        const isFardo = item.unidad === 'FARDO' || item.categoria === 'FARDO' || (item.categoria !== 'LOTE' && item.unidad !== '25 KILOS');
-        if (!isFardo) return false;
+      if (activeTab === 'PRODUCTOS') {
+        const isProd = item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.categoria === 'ESTANDAR' || (item.categoria !== 'LOTE' && item.categoria !== 'MAYORISTA');
+        if (!isProd) return false;
       } else if (activeTab === 'LOTES') {
-        const isLote = item.categoria === 'LOTE' || item.unidad === '25 KILOS' || (item.tipo || '').toLowerCase().includes('25 kg') || (item.tipo || '').toLowerCase().includes('lote');
+        const isLote = item.categoria === 'LOTE' || item.unidad === 'PACK' || (item.tipo || '').toLowerCase().includes('pack');
         if (!isLote) return false;
       } else if (activeTab === 'MAYORISTA') {
         if (!item.precioMayorista || item.precioMayorista <= 0) return false;
@@ -316,7 +316,7 @@ export default function CatalogoPublico() {
               <input
                 id="input-catalog-search"
                 type="text"
-                placeholder="Buscar por tipo de fardo, producto, código o marca (ej. sweater, abrigo, buzo, canada)..."
+                placeholder="Buscar por producto, modelo, código o categoría (ej. smartwatch, audífonos, accesorios)..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-10 py-3 bg-slate-50 hover:bg-slate-100/80 focus:bg-white rounded-2xl border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all"
@@ -388,9 +388,9 @@ export default function CatalogoPublico() {
           {/* Category Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
             {[
-              { id: 'TODOS', label: 'Todos los Fardos' },
-              { id: 'FARDOS', label: 'Fardos Ropa Americana' },
-              { id: 'LOTES', label: 'Lotes x Kilo (25kg)' },
+              { id: 'TODOS', label: 'Todos los Productos' },
+              { id: 'PRODUCTOS', label: 'Productos y Tecnología' },
+              { id: 'LOTES', label: 'Packs y Sets' },
               { id: 'MAYORISTA', label: '🔥 Precios Mayoristas' },
               { id: 'OFERTAS', label: '⭐ Destacados' }
             ].map(tab => (
@@ -475,7 +475,7 @@ export default function CatalogoPublico() {
                             <Package size={28} />
                           </div>
                           <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                            {item.unidad || 'FARDO'}
+                            {item.unidad || 'UNIDAD'}
                           </span>
                         </div>
                       )}
@@ -514,7 +514,7 @@ export default function CatalogoPublico() {
                             {item.codigo}
                           </span>
                           <span className="text-[9px] font-black uppercase text-slate-400">
-                            {item.unidad || 'FARDO'} {item.peso ? `• ${item.peso}kg` : ''}
+                            {item.unidad || 'UNIDAD'} {item.peso ? `• ${item.peso}kg` : ''}
                           </span>
                         </div>
 
@@ -771,8 +771,8 @@ export default function CatalogoPublico() {
                   <ShoppingBag size={20} />
                 </div>
                 <div>
-                  <h3 className="font-black text-base uppercase tracking-tight">Tu Cotización de Fardos</h3>
-                  <p className="text-[11px] text-slate-400">{cartTotalItems} bultos seleccionados</p>
+                  <h3 className="font-black text-base uppercase tracking-tight">Tu Cotización de Productos</h3>
+                  <p className="text-[11px] text-slate-400">{cartTotalItems} unidades seleccionadas</p>
                 </div>
               </div>
               <button

@@ -29,7 +29,7 @@ import { useStore } from '../store/GlobalContext';
 import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME } from '../types';
 
 type SortOption = 'alpha-asc' | 'alpha-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc';
-type FilterCategory = 'TODOS' | 'FARDO' | 'LOTE' | 'MAYORISTA';
+type FilterCategory = 'TODOS' | 'INDIVIDUAL' | 'LOTE' | 'MAYORISTA';
 
 const TableHeader = () => (
   <thead>
@@ -174,11 +174,11 @@ export default function Catalogo() {
       }
       
       // Category filter
-      if (categoryFilter === 'FARDO') {
-        const isFardo = item.unidad === 'FARDO' || item.categoria === 'FARDO' || (item.categoria !== 'LOTE' && item.unidad !== '25 KILOS');
-        if (!isFardo) return false;
+      if (categoryFilter === 'INDIVIDUAL') {
+        const isIndividual = item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.categoria === 'ESTANDAR' || (item.categoria !== 'LOTE' && item.categoria !== 'MAYORISTA');
+        if (!isIndividual) return false;
       } else if (categoryFilter === 'LOTE') {
-        const isLote = item.categoria === 'LOTE' || item.unidad === '25 KILOS' || (item.tipo || '').toLowerCase().includes('25 kg');
+        const isLote = item.categoria === 'LOTE' || item.unidad === 'PACK' || (item.tipo || '').toLowerCase().includes('pack');
         if (!isLote) return false;
       } else if (categoryFilter === 'MAYORISTA') {
         if (!item.precioMayorista || item.precioMayorista <= 0) return false;
@@ -320,7 +320,7 @@ export default function Catalogo() {
 
   const handleShareViaWhatsApp = () => {
     playSound('success');
-    const msg = `¡Hola! 👋 Te comparto nuestro catálogo oficial de *${BRAND_NAME}* (${COMPANY_NAME}) actualizado en tiempo real con stock y precios vigentes:\n\n🔗 ${publicCatalogUrl}\n\nPuedes revisar los fardos disponibles y cotizar directamente por este mismo chat.`;
+    const msg = `¡Hola! 👋 Te comparto nuestro catálogo oficial de *${BRAND_NAME}* (${COMPANY_NAME}) actualizado en tiempo real con stock y precios vigentes:\n\n🔗 ${publicCatalogUrl}\n\nPuedes revisar los productos disponibles y cotizar directamente por este mismo chat.`;
     const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
@@ -466,9 +466,9 @@ export default function Catalogo() {
           </div>
 
           <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Bultos / Fardos Físicos</span>
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Unidades en Bodega</span>
             <span className="text-xl font-black text-slate-900 mt-1 block">{kpis.totalUnits}</span>
-            <span className="text-[10px] text-slate-500 font-medium">Unidades en bodega</span>
+            <span className="text-[10px] text-slate-500 font-medium">Unidades físicas disponibles</span>
           </div>
 
           <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
@@ -487,7 +487,7 @@ export default function Catalogo() {
               <input 
                 id="search-internal-catalog"
                 type="text" 
-                placeholder="Buscar por código, tipo de fardo o especificaciones..."
+                placeholder="Buscar por código, producto o especificaciones..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-slate-900 outline-none focus:border-emerald-500 transition-all"
@@ -523,7 +523,7 @@ export default function Catalogo() {
           {/* Category Tabs + Stock Toggle */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
             <div className="flex items-center gap-1.5 overflow-x-auto">
-              {(['TODOS', 'FARDO', 'LOTE', 'MAYORISTA'] as const).map(cat => (
+              {(['TODOS', 'INDIVIDUAL', 'LOTE', 'MAYORISTA'] as const).map(cat => (
                 <button
                   key={cat}
                   onClick={() => { setCategoryFilter(cat); playSound('click'); }}
@@ -533,7 +533,7 @@ export default function Catalogo() {
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  {cat === 'TODOS' ? 'Todos' : cat === 'FARDO' ? 'Fardos' : cat === 'LOTE' ? 'Lotes x Kilo' : 'Mayoristas'}
+                  {cat === 'TODOS' ? 'Todos' : cat === 'INDIVIDUAL' ? 'Individuales' : cat === 'LOTE' ? 'Packs / Lotes' : 'Mayoristas'}
                 </button>
               ))}
             </div>

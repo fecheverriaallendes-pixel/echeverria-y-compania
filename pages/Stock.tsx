@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp, Camera, Upload } from 'lucide-react';
+import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp, Camera, Upload, DollarSign } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
 import { StaffRole, StockItem } from '../types';
 
@@ -246,6 +246,38 @@ export default function Stock() {
   const normalizeText = (text: string) => 
     text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+  const inventoryStats = useMemo(() => {
+    let totalUnidades = 0;
+    let valorCosto = 0;
+    let valorVenta = 0;
+    let articulosCriticos = 0;
+
+    stock.forEach(item => {
+      const cant = Math.max(0, Number(item.stockActual) || 0);
+      const costo = Number(item.precioCosto) || 0;
+      const venta = Number(item.precioSugerido) || 0;
+      totalUnidades += cant;
+      valorCosto += cant * costo;
+      valorVenta += cant * venta;
+      if (item.stockActual > 0 && item.stockActual < 3) {
+        articulosCriticos += 1;
+      }
+    });
+
+    const margenEstimado = valorVenta - valorCosto;
+    const porcentajeMargen = valorVenta > 0 ? ((margenEstimado / valorVenta) * 100).toFixed(1) : '0';
+
+    return {
+      totalUnidades,
+      valorCosto,
+      valorVenta,
+      margenEstimado,
+      porcentajeMargen,
+      articulosCriticos,
+      totalReferencias: stock.length
+    };
+  }, [stock]);
+
   const filteredStock = useMemo(() => {
     const normalizedSearch = normalizeText(searchTerm);
     return stock.filter(item => {
@@ -257,7 +289,7 @@ export default function Stock() {
       if (categoryFilter === 'NEGATIVO') {
         matchesCategory = item.stockActual < 0;
       } else if (categoryFilter === 'UNIDAD') {
-        matchesCategory = item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.categoria === 'ESTANDAR' || item.categoria === 'FARDO';
+        matchesCategory = item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.categoria === 'ESTANDAR';
       } else if (categoryFilter === 'CAJA') {
         matchesCategory = item.unidad === 'CAJA' || item.unidad === 'PACK' || item.unidad === 'SET' || item.categoria === 'MAYORISTA' || item.categoria === 'LOTE';
       }
@@ -267,12 +299,12 @@ export default function Stock() {
   }, [stock, searchTerm, providerFilter, categoryFilter]);
 
   const downloadFormat = () => {
-    const csvContent = "codigo,tipo,proveedor,precioCosto,precioSugerido,precioMayorista,minUnidadesMayorista,stockActual,unidad\nF-101,Polerones Premium,Bale Center,100000,150000,120000,5,10,FARDO\nU-102,Jeans Unitario,USA Direct,8000,15000,11000,5,50,PIEZA";
+    const csvContent = "codigo,tipo,proveedor,precioCosto,precioSugerido,precioMayorista,minUnidadesMayorista,stockActual,unidad\nTEC-101,Smartwatch Ultra Z,Tech Global,15000,29990,24990,5,20,UNIDAD\nAUD-202,Audífonos Cancelación Ruido,Shenzhen Corp,12000,24990,19990,5,30,PIEZA";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'formato_carga_echeverria.csv';
+    a.download = 'formato_carga_elmundo_tech.csv';
     a.click();
     playSound('success');
   };
@@ -301,7 +333,7 @@ export default function Stock() {
             precioMayorista: Number(pMayorista) || undefined,
             minUnidadesMayorista: Number(minMayorista) || 5,
             stockActual: Number(stockCant) || 1,
-            unidad: (unidad?.trim().toUpperCase() === 'PIEZA' ? 'PIEZA' : 'FARDO')
+            unidad: (unidad?.trim().toUpperCase() === 'PIEZA' ? 'PIEZA' : 'UNIDAD')
           });
         }
       }
@@ -322,13 +354,13 @@ export default function Stock() {
     try {
       let finalCodigo = newBale.codigo;
       if (!finalCodigo) {
-          const existingCodes = stock.map(s => s.codigo || '').filter(c => c.startsWith('MDF-'));
+          const existingCodes = stock.map(s => s.codigo || '').filter(c => c.startsWith('TEC-') || c.startsWith('MDF-'));
           let nextNum = 1;
           if(existingCodes.length > 0) {
               const numbers = existingCodes.map(c => parseInt(c.split('-')[1]) || 0);
               nextNum = Math.max(...numbers) + 1;
           }
-          finalCodigo = `MDF-${String(nextNum).padStart(3, '0')}`;
+          finalCodigo = `TEC-${String(nextNum).padStart(3, '0')}`;
       }
 
       const codeExists = stock.some(s => (s.codigo || '').toUpperCase() === finalCodigo.toUpperCase());
@@ -442,6 +474,74 @@ export default function Stock() {
         )}
       </div>
 
+      {/* Resumen & Auditoría de Valor Bodega */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Bodega (Venta)</span>
+            <span className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700"><DollarSign size={18} /></span>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              ${inventoryStats.valorVenta.toLocaleString('es-CL')}
+            </span>
+            <p className="text-[11px] font-semibold text-slate-400 mt-1">
+              Potencial comercial ({inventoryStats.totalUnidades.toLocaleString('es-CL')} unidades en stock)
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Costo Total Inventario</span>
+            <span className="p-2.5 rounded-2xl bg-blue-100 text-blue-700"><Layers size={18} /></span>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              ${inventoryStats.valorCosto.toLocaleString('es-CL')}
+            </span>
+            <p className="text-[11px] font-semibold text-slate-400 mt-1">
+              Inversión total en costo de adquisición
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Margen Bruto Proyectado</span>
+            <span className="p-2.5 rounded-2xl bg-purple-100 text-purple-700"><TrendingUp size={18} /></span>
+          </div>
+          <div className="mt-3">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-slate-900 tracking-tight">
+                ${inventoryStats.margenEstimado.toLocaleString('es-CL')}
+              </span>
+              <span className="text-xs font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                +{inventoryStats.porcentajeMargen}%
+              </span>
+            </div>
+            <p className="text-[11px] font-semibold text-slate-400 mt-1">
+              Margen bruto estimado sobre el inventario
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Unidades Físicas</span>
+            <span className="p-2.5 rounded-2xl bg-amber-100 text-amber-700"><Package size={18} /></span>
+          </div>
+          <div className="mt-3">
+            <span className="text-2xl font-black text-slate-900 tracking-tight">
+              {inventoryStats.totalUnidades.toLocaleString('es-CL')}
+            </span>
+            <p className="text-[11px] font-semibold text-slate-400 mt-1">
+              {inventoryStats.totalReferencias} productos registrados ({inventoryStats.articulosCriticos} en alerta de stock)
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex flex-col lg:flex-row gap-6 items-center justify-between w-full">
         <div className="flex flex-wrap items-center gap-4 w-full lg:w-auto">
           <div className="flex bg-slate-100 p-2 rounded-[32px] shadow-sm">
@@ -536,8 +636,8 @@ export default function Stock() {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex flex-col">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${(item.unidad === 'UNIDAD' || item.unidad === 'PIEZA' || item.unidad === 'FARDO') ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {item.unidad === 'FARDO' ? 'UNIDAD' : item.unidad}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700">
+                        {item.unidad || 'UNIDAD'}
                       </span>
                       {item.peso && (item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') && (
                         <span className="text-[10px] font-black text-amber-600 mt-1 ml-1">{item.peso} KG</span>
@@ -573,11 +673,16 @@ export default function Stock() {
                   <td className="px-8 py-6 text-right">
                     <div className="flex flex-col items-end">
                       <span className="font-black text-slate-900 text-xl tracking-tighter">
-                        ${item.precioSugerido.toLocaleString()}
+                        ${Number(item.precioSugerido || 0).toLocaleString('es-CL')}
                       </span>
+                      {canModify && Number(item.precioCosto || 0) > 0 && (
+                        <span className="text-[11px] font-bold text-slate-400 mt-0.5">
+                          Costo: ${Number(item.precioCosto || 0).toLocaleString('es-CL')}
+                        </span>
+                      )}
                       {!!item.precioMayorista && item.precioMayorista > 0 && (
                         <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                          May ({item.minUnidadesMayorista || 5}+ uds): ${item.precioMayorista.toLocaleString()}
+                          May ({item.minUnidadesMayorista || 5}+ uds): ${Number(item.precioMayorista).toLocaleString('es-CL')}
                         </span>
                       )}
                     </div>
@@ -849,14 +954,14 @@ export default function Stock() {
                     <button 
                       type="button"
                       onClick={() => setEditingItem({...editingItem, categoria: 'ESTANDAR'})}
-                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${(editingItem.categoria === 'ESTANDAR' || editingItem.categoria === 'FARDO') ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500'}`}
+                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${editingItem.categoria === 'ESTANDAR' ? 'bg-slate-900 text-white shadow-xl' : 'text-slate-500'}`}
                     >
                       <Layers size={20} /> Individual
                     </button>
                     <button 
                       type="button"
                       onClick={() => setEditingItem({...editingItem, categoria: 'MAYORISTA'})}
-                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${(editingItem.categoria === 'MAYORISTA' || editingItem.categoria === 'LOTE') ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500'}`}
+                      className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-[22px] font-black text-xs uppercase tracking-widest transition-all ${editingItem.categoria === 'MAYORISTA' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500'}`}
                     >
                       <Boxes size={20} /> Mayorista
                     </button>
@@ -867,7 +972,7 @@ export default function Stock() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Tipo de Unidad</label>
                   <select 
                     className="w-full px-7 py-5 bg-slate-100 rounded-[28px] font-black text-xs uppercase tracking-widest outline-none border-2 border-transparent"
-                    value={editingItem.unidad === 'FARDO' ? 'UNIDAD' : editingItem.unidad === 'LOTE' ? 'PACK' : editingItem.unidad}
+                    value={editingItem.unidad === 'FARDO' ? 'UNIDAD' : editingItem.unidad || 'UNIDAD'}
                     onChange={(e) => setEditingItem({...editingItem, unidad: e.target.value as any})}
                   >
                     <option value="UNIDAD">UNIDAD</option>
@@ -1060,7 +1165,7 @@ export default function Stock() {
                 <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mb-1">Auditoría / Kárdex del Producto</p>
                 <h3 className="text-3xl font-black uppercase tracking-tighter italic">Historial de Movimientos</h3>
                 <p className="text-slate-400 text-xs font-bold mt-1 uppercase">
-                  {selectedHistoryItem.codigo} — {selectedHistoryItem.tipo} (P. Sugerido: ${selectedHistoryItem.precioSugerido?.toLocaleString()})
+                  {selectedHistoryItem.codigo} — {selectedHistoryItem.tipo} (P. Sugerido: ${Number(selectedHistoryItem.precioSugerido || 0).toLocaleString('es-CL')})
                 </p>
               </div>
               <button onClick={() => setSelectedHistoryItem(null)} className="p-3 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white">

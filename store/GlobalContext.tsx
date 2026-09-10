@@ -565,7 +565,13 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(item => ({
+            ...item,
+            unidad: item.unidad === 'FARDO' ? 'UNIDAD' : item.unidad,
+            categoria: item.categoria === 'FARDO' ? 'ESTANDAR' : (item.categoria || 'ESTANDAR')
+          }));
+        }
       } catch (e) {
         console.warn("Error parsing cached stock:", e);
       }
@@ -575,7 +581,8 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       ...item,
       id: item.codigo.trim().toUpperCase(),
       disponible: (item.stockActual || 0) > 0,
-      categoria: (item as any).categoria || 'FARDO'
+      unidad: (item as any).unidad === 'FARDO' ? 'UNIDAD' : (item.unidad || 'UNIDAD'),
+      categoria: (item as any).categoria === 'FARDO' ? 'ESTANDAR' : ((item as any).categoria || 'ESTANDAR')
     }));
   });
 
@@ -835,7 +842,14 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
         });
         unsubStock = onSnapshot(collection(db, 'stock'), (snap) => {
           if (!snap.empty) {
-            const stockData = snap.docs.map(d => d.data() as StockItem);
+            const stockData = snap.docs.map(d => {
+              const data = d.data() as StockItem;
+              return {
+                ...data,
+                unidad: data.unidad === 'FARDO' ? 'UNIDAD' : (data.unidad || 'UNIDAD'),
+                categoria: data.categoria === 'FARDO' ? 'ESTANDAR' : (data.categoria || 'ESTANDAR')
+              };
+            });
             setStock(stockData);
             safeLocalStorage.setItem('mdf_stock', JSON.stringify(stockData));
           }
@@ -1289,7 +1303,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
         codigo: code, 
         id: newId, 
         disponible: item.stockActual > 0,
-        categoria: item.categoria || 'FARDO'
+        categoria: item.categoria || 'ESTANDAR'
       };
       
       // Remove undefined values to prevent Firestore errors
@@ -1383,21 +1397,21 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     }
   };
   
-  const calculateCommission = (codigoFardo: string): CommissionType => {
-      const item = stock.find(i => i.codigo === codigoFardo);
+  const calculateCommission = (codigoProducto: string): CommissionType => {
+      const item = stock.find(i => i.codigo === codigoProducto);
       if (!item) return CommissionType.FARDO_NORMAL;
       
-      // Si es LOTE
-      if (item.categoria === 'LOTE' || item.unidad === 'LOTE') {
+      // Si es LOTE o MAYORISTA
+      if (item.categoria === 'LOTE' || item.categoria === 'MAYORISTA' || item.unidad === 'LOTE') {
           return CommissionType.LOTE;
       }
 
-      // Si es MEDIO FARDO
-      if (item.unidad === 'MEDIO FARDO') {
+      // Si es Especial / Pack / Set
+      if (item.unidad === 'MEDIO FARDO' || item.unidad === 'PACK' || item.unidad === 'SET') {
           return CommissionType.MEDIO_FARDO;
       }
       
-      // Si es FARDO (Normal o Promo)
+      // Si es Promoción
       if (item.promocion) {
           return CommissionType.FARDO_PROMO;
       }
@@ -1506,7 +1520,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
             codigo: code,
             stockActual: totalStock,
             disponible: totalStock > 0,
-            categoria: representativeItem.categoria || 'FARDO'
+            categoria: representativeItem.categoria || 'ESTANDAR'
           };
           delete (fixedItem as any).firestoreId;
           
@@ -1679,7 +1693,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
           ...item, 
           id: newId, 
           disponible: true,
-          categoria: (item as any).categoria || 'FARDO'
+          categoria: (item as any).categoria || 'ESTANDAR'
         });
         addCount++;
         if (addCount === 400) {
@@ -1932,16 +1946,31 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     sales.forEach(s => { if (s.vendedor) sellerStats[s.vendedor] = (sellerStats[s.vendedor] || 0) + s.total; });
     const topSellers = Object.entries(sellerStats).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
+    const totalDisponibles = stock.reduce((acc, i) => acc + Math.max(0, Number(i.stockActual) || 0), 0);
+    const valorInventarioVenta = stock.reduce((acc, i) => {
+      const cant = Math.max(0, Number(i.stockActual) || 0);
+      const precio = Number(i.precioSugerido) || 0;
+      return acc + (cant * precio);
+    }, 0);
+    const valorInventarioCosto = stock.reduce((acc, i) => {
+      const cant = Math.max(0, Number(i.stockActual) || 0);
+      const costo = Number(i.precioCosto) || 0;
+      return acc + (cant * costo);
+    }, 0);
+    const utilidadInventario = valorInventarioVenta - valorInventarioCosto;
+
     return {
       ventasHoy: todaySales.reduce((acc, s) => acc + (s.total || 0), 0),
       countHoy: todaySales.length,
       totalVendido: totalIngresos,
       utilidadTotal: totalIngresos - totalCosto,
-      disponibles: stock.reduce((acc, i) => acc + i.stockActual, 0),
+      disponibles: totalDisponibles,
       pendientesDatos: sales.filter(s => !s.datosCompletos).length,
       topSellers,
       stockCritico: stock.filter(i => i.stockActual < 3 && i.stockActual > 0).length,
-      valorInventarioVenta: stock.reduce((acc, i) => acc + (i.precioSugerido * i.stockActual), 0),
+      valorInventarioVenta,
+      valorInventarioCosto,
+      utilidadInventario,
       deudaTotalProveedores: purchases.reduce((acc, p) => acc + p.saldoPendiente, 0),
       faltaCompletar: sales.filter(s => !s.datosCompletos).length,
       faltaPagar: sales.filter(s => s.estadoPago === 'Pendiente').length,

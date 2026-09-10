@@ -15,11 +15,11 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
 
   const totalVentas = sales.reduce((acc, s) => acc + (s.total || 0), 0);
 
-  const vendedores: Record<string, { fardos: number; lotes: number; cantNormal: number; cantPromo: number; ventas: number }> = {};
+  const vendedores: Record<string, { unidades: number; lotes: number; cantNormal: number; cantPromo: number; ventas: number }> = {};
   
   sales.forEach(s => {
     if (!vendedores[s.vendedor]) {
-      vendedores[s.vendedor] = { fardos: 0, lotes: 0, cantNormal: 0, cantPromo: 0, ventas: 0 };
+      vendedores[s.vendedor] = { unidades: 0, lotes: 0, cantNormal: 0, cantPromo: 0, ventas: 0 };
     }
 
     const processEntry = (tipo: CommissionType | undefined, qty: number, codigo: string, totalItem: number) => {
@@ -32,7 +32,7 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
         if (isLote) {
           vendedores[s.vendedor].lotes += qty;
         } else {
-          vendedores[s.vendedor].fardos += qty;
+          vendedores[s.vendedor].unidades += qty;
         }
         
         if (isPromo) {
@@ -53,7 +53,7 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
     }
   });
 
-  const totalFardos = Object.values(vendedores).reduce((acc, v) => acc + v.fardos, 0);
+  const totalUnidades = Object.values(vendedores).reduce((acc, v) => acc + v.unidades, 0);
   const totalLotes = Object.values(vendedores).reduce((acc, v) => acc + v.lotes, 0);
 
   return (
@@ -76,7 +76,7 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
             <div className="bg-slate-50 p-6 rounded-[24px] border border-slate-100 text-center">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resumen Unidades</p>
               <p className="text-xl font-black text-slate-900 uppercase">
-                📦 Unidades: <span className="text-blue-600">{totalFardos}</span> | 🏷️ Lotes: <span className="text-amber-600">{totalLotes}</span>
+                📦 Unidades: <span className="text-blue-600">{totalUnidades}</span> | 🏷️ Lotes: <span className="text-amber-600">{totalLotes}</span>
               </p>
             </div>
           </div>
@@ -96,8 +96,8 @@ export const ReportModal = ({ isOpen, onClose, title, sales, stats }: ReportProp
                 <tr key={vend} className="text-sm font-bold text-slate-700">
                   <td className="p-4 font-black">{vend}</td>
                   <td className="p-4">
-                    {data.fardos + data.lotes}
-                    <div className="text-[10px] text-slate-400">U:{data.fardos} L:{data.lotes}</div>
+                    {data.unidades + data.lotes}
+                    <div className="text-[10px] text-slate-400">U:{data.unidades} L:{data.lotes}</div>
                   </td>
                   <td className="p-4 text-blue-700 bg-blue-50">{data.cantNormal}</td>
                   <td className="p-4 text-red-700 bg-red-50">{data.cantPromo}</td>

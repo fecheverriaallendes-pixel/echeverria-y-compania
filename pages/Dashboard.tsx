@@ -207,25 +207,25 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         <StatCard 
           title="Ventas de Hoy" 
-          value={`$${stats.ventasHoy.toLocaleString()}`} 
+          value={`$${(stats.ventasHoy || 0).toLocaleString('es-CL')}`} 
           icon={TrendingUp} 
           color="emerald" 
-          subtitle={`${stats.countHoy} órdenes cerradas`}
+          subtitle={`${stats.countHoy || 0} órdenes cerradas`}
           trend="+12%"
         />
         <StatCard 
           title="Utilidad Neta Est." 
-          value={`$${stats.utilidadTotal.toLocaleString()}`} 
+          value={`$${(stats.utilidadTotal || 0).toLocaleString('es-CL')}`} 
           icon={DollarSign} 
           color="blue" 
           subtitle="Margen después de costos"
         />
         <StatCard 
-          title="Valor Bodega" 
-          value={`$${stats.valorInventarioVenta.toLocaleString()}`} 
+          title="Valor Bodega (Venta)" 
+          value={`$${(stats.valorInventarioVenta || 0).toLocaleString('es-CL')}`} 
           icon={Package} 
           color="amber" 
-          subtitle={`${stats.disponibles} artículos en stock`}
+          subtitle={`${stats.disponibles || 0} artículos | Costo: $${(stats.valorInventarioCosto || 0).toLocaleString('es-CL')}`}
         />
         <StatCard 
           title="Eficiencia TikTok" 
@@ -238,8 +238,8 @@ export default function Dashboard() {
         <StatCard title="Falta Pagar" value={stats.faltaPagar} icon={DollarSign} color="amber" subtitle="Pedidos pendientes de pago" />
         <StatCard title="Falta Despachar" value={stats.faltaDespachar} icon={Truck} color="blue" subtitle="Pedidos listos para salir" />
         <StatCard title="Cupones Pendientes" value={pendingCoupons} icon={Ticket} color="emerald" subtitle="Cupones por canjear" />
-        <StatCard title="Dinero en Cupones" value={`$${totalPendingValue.toLocaleString()}`} icon={DollarSign} color="red" subtitle="Valor total pendiente" />
-        <StatCard title="Créditos Pendientes" value={`$${totalCreditosPendientes.toLocaleString('es-CL')}`} icon={DollarSign} color="rose" subtitle={`${countCreditosPendientes} créditos/abonos activos`} />
+        <StatCard title="Dinero en Cupones" value={`$${(totalPendingValue || 0).toLocaleString('es-CL')}`} icon={DollarSign} color="red" subtitle="Valor total pendiente" />
+        <StatCard title="Créditos Pendientes" value={`$${(totalCreditosPendientes || 0).toLocaleString('es-CL')}`} icon={DollarSign} color="rose" subtitle={`${countCreditosPendientes} créditos/abonos activos`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
