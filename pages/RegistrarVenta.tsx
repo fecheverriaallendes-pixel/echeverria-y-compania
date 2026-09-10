@@ -1,12 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, Zap, ClipboardList, CheckCircle2, User, Phone, DollarSign, Package, MapPin, Tag, Truck, CreditCard, FileText, ChevronRight, Coins, Building2, Home } from 'lucide-react';
+import { Save, Zap, ClipboardList, CheckCircle2, User, Phone, DollarSign, Package, MapPin, Tag, Truck, CreditCard, FileText, ChevronRight, Coins, Building2, Home, ShoppingBag, Store } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { SaleType, SaleStatus, StaffRole, CommissionType, DispatchType } from '../types';
+import { SaleType, SaleStatus, StaffRole, CommissionType, DispatchType, DispatchMethod, DISPATCH_OPTIONS, DispatchOptionDef } from '../types';
 
 export default function RegistrarVenta() {
-  const { stock, staff, customers, addSale, playSound } = useStore();
+  const { stock, staff, customers, addSale, playSound, carriers } = useStore();
   const navigate = useNavigate();
   const [mode, setMode] = useState<'QUICK' | 'NORMAL' | 'NOTA_VENTA'>('QUICK');
   const [success, setSuccess] = useState(false);
@@ -35,7 +35,9 @@ export default function RegistrarVenta() {
     juntaCompra: string;
     observaciones: string;
     tipoDespacho?: DispatchType;
+    metodoDespacho?: string;
     agencia?: string;
+    transportista?: string;
   }>({
     cliente: '',
     vendedor: '',
@@ -53,9 +55,39 @@ export default function RegistrarVenta() {
     tipoComision: CommissionType.FARDO_NORMAL,
     juntaCompra: 'DESPACHO INMEDIATO',
     observaciones: '',
-    tipoDespacho: undefined,
-    agencia: ''
+    tipoDespacho: DispatchType.DOMICILIO,
+    metodoDespacho: DispatchMethod.TRANSPORTE_PROPIO,
+    agencia: '',
+    transportista: 'Transporte propio'
   });
+
+  const handleSelectDispatchOption = (option: DispatchOptionDef) => {
+    playSound('click');
+    let newDireccion = formData.direccion;
+    let newJuntaCompra = formData.juntaCompra;
+
+    if (option.id === DispatchMethod.RETIRO_LOCAL) {
+      newJuntaCompra = 'RETIRO EN LOCAL';
+      if (!newDireccion || newDireccion.trim() === '') {
+        newDireccion = 'RETIRO EN LOCAL';
+      }
+    } else {
+      newJuntaCompra = 'DESPACHO INMEDIATO';
+      if (newDireccion === 'RETIRO EN LOCAL') {
+        newDireccion = '';
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      metodoDespacho: option.label,
+      tipoDespacho: option.type,
+      transportista: option.carrier,
+      agencia: option.agency,
+      juntaCompra: newJuntaCompra,
+      direccion: newDireccion
+    }));
+  };
 
   const handleClientChange = (name: string) => {
       setFormData(prev => ({...prev, cliente: name.toUpperCase()}));
@@ -165,8 +197,19 @@ export default function RegistrarVenta() {
     
     const finalTotal = isNotaVenta ? items.reduce((acc, item) => acc + item.valorUnitario * item.cantidad, 0) : formData.valorUnitario * formData.cantidad;
     
+    const selectedMethod = formData.metodoDespacho || DispatchMethod.TRANSPORTE_PROPIO;
+    const matchingOption = DISPATCH_OPTIONS.find(o => o.label === selectedMethod || o.id === selectedMethod);
+
+    const finalTipoDespacho = formData.tipoDespacho || matchingOption?.type || DispatchType.DOMICILIO;
+    const finalTransportista = formData.transportista || matchingOption?.carrier || '';
+    const finalAgencia = formData.agencia || matchingOption?.agency || '';
+    const finalDireccion = (selectedMethod === DispatchMethod.RETIRO_LOCAL && (!formData.direccion || formData.direccion.trim() === ''))
+      ? 'RETIRO EN LOCAL'
+      : formData.direccion;
+
     const finalData = {
       ...formData,
+      direccion: finalDireccion,
       tipoVenta: isQuick ? SaleType.LIVE : isNotaVenta ? SaleType.NOTA_VENTA : SaleType.NORMAL,
       items: isNotaVenta ? items : undefined,
       total: finalTotal,
@@ -174,8 +217,10 @@ export default function RegistrarVenta() {
       status: SaleStatus.PENDIENTE,
       datosCompletos: !isQuick,
       variante: isQuick ? '' : formData.variante, 
-      tipoDespacho: isQuick ? undefined : (formData.tipoDespacho || DispatchType.AGENCIA),
-      agencia: isQuick ? undefined : formData.agencia
+      tipoDespacho: finalTipoDespacho,
+      metodoDespacho: selectedMethod,
+      transportista: finalTransportista,
+      agencia: finalAgencia
     };
 
     console.log("Final data to be saved:", finalData);
@@ -189,7 +234,11 @@ export default function RegistrarVenta() {
       cliente: '', vendedor: formData.vendedor, telefono: '', rut: '',
       codigoFardo: '', esManual: true, variante: isQuick ? '' : 'Estándar', valorUnitario: 0, cantidad: 1,
       direccion: '', estadoPago: 'Pendiente', medioPago: 'Efectivo', montoAbonado: 0, tipoComision: CommissionType.FARDO_NORMAL,
-      juntaCompra: 'DESPACHO INMEDIATO', observaciones: '', tipoDespacho: undefined
+      juntaCompra: 'DESPACHO INMEDIATO', observaciones: '',
+      tipoDespacho: DispatchType.DOMICILIO,
+      metodoDespacho: DispatchMethod.TRANSPORTE_PROPIO,
+      agencia: '',
+      transportista: 'Transporte propio'
     });
     setItems([]);
     setNewItem({codigoFardo: '', cantidad: 1, valorUnitario: 0, esManual: false, tipoComision: CommissionType.FARDO_NORMAL});
@@ -289,6 +338,126 @@ export default function RegistrarVenta() {
               <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2"><MapPin size={14} className="text-blue-500" /> Dirección Despacho</label>
               <textarea required className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-[24px] font-black text-lg uppercase resize-none h-24" placeholder="CALLE, NÚMERO, DEPTO/OFICINA, COMUNA, CIUDAD" value={formData.direccion} onChange={(e) => setFormData({...formData, direccion: e.target.value.toUpperCase()})}/>
             </div>
+          </div>
+
+          {/* 5 Métodos de Despacho Solicitados */}
+          <div className="p-6 sm:p-8 bg-white rounded-[36px] border-2 border-slate-200/90 shadow-sm space-y-4 animate-in fade-in duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <label className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
+                <Truck size={18} className="text-blue-600" /> Método de Despacho ({DISPATCH_OPTIONS.length} Opciones)
+              </label>
+              <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                Canal Logístico
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {DISPATCH_OPTIONS.map((opt) => {
+                const isSelected = formData.metodoDespacho === opt.label;
+                const getIcon = () => {
+                  switch (opt.id) {
+                    case DispatchMethod.MERCADO_LIBRE:
+                      return <ShoppingBag size={18} />;
+                    case DispatchMethod.TRANSPORTE_PROPIO:
+                      return <Home size={18} />;
+                    case DispatchMethod.TAMARINDO:
+                      return <Truck size={18} />;
+                    case DispatchMethod.BLUEXPRESS:
+                      return <Building2 size={18} />;
+                    case DispatchMethod.RETIRO_LOCAL:
+                      return <Store size={18} />;
+                    default:
+                      return <Truck size={18} />;
+                  }
+                };
+
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => handleSelectDispatchOption(opt)}
+                    className={`p-4 rounded-[22px] border-2 text-left transition-all duration-200 flex flex-col justify-between group ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20 ring-2 ring-blue-400/30'
+                        : 'bg-slate-50 text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between w-full mb-2">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                        isSelected ? 'bg-white/20 text-white' : 'bg-white text-slate-600 shadow-xs group-hover:bg-slate-200'
+                      }`}>
+                        {getIcon()}
+                      </div>
+                      {isSelected ? (
+                        <span className="flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-white/20 text-white">
+                          <CheckCircle2 size={12} /> Activo
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">
+                          {opt.shortLabel}
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="font-black text-xs uppercase tracking-tight leading-snug">
+                        {opt.label}
+                      </p>
+                      <p className={`text-[10px] font-medium mt-1 leading-tight ${
+                        isSelected ? 'text-white/80' : 'text-slate-400'
+                      }`}>
+                        {opt.description}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {formData.metodoDespacho === DispatchMethod.BLUEXPRESS && (
+              <div className="p-4 bg-blue-50/60 rounded-[20px] border border-blue-200 shadow-xs space-y-1.5 animate-in fade-in duration-200">
+                <label className="text-[10px] font-black text-blue-800 uppercase tracking-widest block">
+                  Sucursal Bluexpress o Destino Regional (Opcional)
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-5 py-3 bg-white border-2 border-blue-100 rounded-xl font-bold uppercase text-xs outline-none focus:border-blue-500"
+                  placeholder="EJ: SUCURSAL COQUIMBO / DOMICILIO TEMUCO"
+                  value={formData.agencia || ''}
+                  onChange={(e) => setFormData({...formData, agencia: e.target.value.toUpperCase()})}
+                />
+                <p className="text-[10px] text-blue-600/80 italic">
+                  Si el envío regional es con retiro en sucursal Bluexpress, indícala aquí.
+                </p>
+              </div>
+            )}
+
+            {formData.metodoDespacho === DispatchMethod.TRANSPORTE_PROPIO && (
+              <div className="p-4 bg-emerald-50/60 rounded-[20px] border border-emerald-200 shadow-xs space-y-1.5 animate-in fade-in duration-200">
+                <label className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">
+                  Chofer / Móvil Asignado (Opcional)
+                </label>
+                <select
+                  className="w-full px-5 py-3 bg-white border-2 border-emerald-100 rounded-xl font-bold uppercase text-xs outline-none focus:border-emerald-500"
+                  value={formData.transportista || 'Transporte propio'}
+                  onChange={(e) => setFormData({...formData, transportista: e.target.value})}
+                >
+                  <option value="Transporte propio">Transporte propio (Asignar chofer después en Despachos)</option>
+                  {carriers.filter(c => c !== 'Transporte propio' && c !== 'Transporte MERCADO LIBRE' && c !== 'Bluexpress' && c !== 'Transportes Tamarindo').map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {formData.metodoDespacho === DispatchMethod.RETIRO_LOCAL && (
+              <div className="p-4 bg-purple-50 rounded-[20px] border border-purple-200 text-purple-900 flex items-center gap-3 animate-in fade-in duration-200">
+                <Store size={20} className="text-purple-600 flex-shrink-0" />
+                <p className="text-xs font-bold leading-relaxed">
+                  <strong>Retiro en Local:</strong> El cliente retirará directamente su pedido en tienda o bodega central. La dirección se autocompleta con <em>RETIRO EN LOCAL</em>.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -401,49 +570,25 @@ export default function RegistrarVenta() {
             )}
           </div>
 
-          {mode === 'NOTA_VENTA' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-10 bg-amber-50/30 rounded-[40px] border-2 border-amber-100 animate-in fade-in slide-in-from-top duration-500">
-              <div className="md:col-span-2 space-y-4">
-                <label className="flex items-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-widest mb-3 ml-2"><Truck size={14} /> Opciones de Despacho</label>
-                <div className="flex bg-white p-1.5 rounded-[24px] border-2 border-amber-100 shadow-sm">
-                  <button type="button" onClick={() => setFormData({...formData, tipoDespacho: DispatchType.AGENCIA})} className={`flex-1 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest ${formData.tipoDespacho === DispatchType.AGENCIA ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400'}`}>Agencia</button>
-                  <button type="button" onClick={() => setFormData({...formData, tipoDespacho: DispatchType.DOMICILIO})} className={`flex-1 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest ${formData.tipoDespacho === DispatchType.DOMICILIO ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400'}`}>Domicilio</button>
-                  <button type="button" onClick={() => setFormData({...formData, tipoDespacho: DispatchType.RETIRO})} className={`flex-1 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest ${formData.tipoDespacho === DispatchType.RETIRO ? 'bg-amber-600 text-white shadow-md' : 'text-slate-400'}`}>Retiro</button>
-                </div>
-                {formData.tipoDespacho === DispatchType.AGENCIA && <input required type="text" className="w-full px-7 py-5 bg-white border-2 border-amber-100 rounded-[24px] font-black uppercase" placeholder="NOMBRE DE LA AGENCIA" value={formData.agencia || ''} onChange={(e) => setFormData({...formData, agencia: e.target.value.toUpperCase()})}/>}
-              </div>
-            </div>
-          )}
           {mode === 'NORMAL' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-10 bg-blue-50/30 rounded-[40px] border-2 border-blue-100 animate-in fade-in slide-in-from-top duration-500">
-               <div className="md:col-span-2">
-                <label className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 ml-2"><Tag size={14} /> Variante</label>
-                <select required className="w-full px-7 py-5 bg-white border-2 border-blue-100 rounded-[24px] font-black text-lg" value={formData.variante} onChange={(e) => {
-                    const newVar = e.target.value;
-                    let newComm = formData.tipoComision;
-                    if (formData.esManual) {
-                        if (newVar === 'CAJA') newComm = CommissionType.LOTE;
-                        else if (newVar === 'SET' || newVar === 'PACK') newComm = CommissionType.MEDIO_FARDO;
-                        else if (newVar === 'UNIDAD') newComm = CommissionType.FARDO_NORMAL;
-                    }
-                    setFormData({...formData, variante: newVar, tipoComision: newComm});
-                }}>
-                    <option value="">ELEGIR...</option>
-                    <option value="UNIDAD">UNIDAD STANDARD</option>
-                    <option value="CAJA">CAJA COMPLETA</option>
-                    <option value="SET">SET DE PRODUCTOS</option>
-                    <option value="PACK">PACK DE PRODUCTOS</option>
-                </select>
-              </div>
-              <div className="md:col-span-2 space-y-4">
-                <label className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 ml-2"><Truck size={14} /> Opciones de Despacho</label>
-                <div className="flex bg-white p-1.5 rounded-[24px] border-2 border-blue-100 shadow-sm">
-                  <button type="button" onClick={() => setFormData({...formData, tipoDespacho: DispatchType.AGENCIA})} className={`flex-1 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest ${formData.tipoDespacho === DispatchType.AGENCIA ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}>Agencia</button>
-                  <button type="button" onClick={() => setFormData({...formData, tipoDespacho: DispatchType.DOMICILIO})} className={`flex-1 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest ${formData.tipoDespacho === DispatchType.DOMICILIO ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}>Domicilio</button>
-                  <button type="button" onClick={() => setFormData({...formData, tipoDespacho: DispatchType.RETIRO})} className={`flex-1 py-4 rounded-[20px] font-black text-xs uppercase tracking-widest ${formData.tipoDespacho === DispatchType.RETIRO ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400'}`}>Retiro</button>
-                </div>
-                {formData.tipoDespacho === DispatchType.AGENCIA && <input required type="text" className="w-full px-7 py-5 bg-white border-2 border-blue-100 rounded-[24px] font-black uppercase" placeholder="NOMBRE DE LA AGENCIA" value={formData.agencia || ''} onChange={(e) => setFormData({...formData, agencia: e.target.value.toUpperCase()})}/>}
-              </div>
+            <div className="p-8 bg-blue-50/30 rounded-[40px] border-2 border-blue-100 animate-in fade-in slide-in-from-top duration-500">
+              <label className="flex items-center gap-2 text-[10px] font-black text-blue-600 uppercase tracking-widest mb-3 ml-2"><Tag size={14} /> Variante</label>
+              <select required className="w-full px-7 py-5 bg-white border-2 border-blue-100 rounded-[24px] font-black text-lg" value={formData.variante} onChange={(e) => {
+                  const newVar = e.target.value;
+                  let newComm = formData.tipoComision;
+                  if (formData.esManual) {
+                      if (newVar === 'CAJA') newComm = CommissionType.LOTE;
+                      else if (newVar === 'SET' || newVar === 'PACK') newComm = CommissionType.MEDIO_FARDO;
+                      else if (newVar === 'UNIDAD') newComm = CommissionType.FARDO_NORMAL;
+                  }
+                  setFormData({...formData, variante: newVar, tipoComision: newComm});
+              }}>
+                  <option value="">ELEGIR...</option>
+                  <option value="UNIDAD">UNIDAD STANDARD</option>
+                  <option value="CAJA">CAJA COMPLETA</option>
+                  <option value="SET">SET DE PRODUCTOS</option>
+                  <option value="PACK">PACK DE PRODUCTOS</option>
+              </select>
             </div>
           )}
 

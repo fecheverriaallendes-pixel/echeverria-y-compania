@@ -471,6 +471,7 @@ interface StoreContextType {
   lastSync: string | null;
   stockHistory: StockHistoryEvent[];
   addStockHistoryEvent: (event: Omit<StockHistoryEvent, 'id' | 'fecha'>) => Promise<void>;
+  stockLoaded: boolean;
 }
 
 // Safe storage wrapper to prevent Safari private mode exception crashes
@@ -558,10 +559,24 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     return saved ? JSON.parse(saved) : [];
   });
   
+  const [stockLoaded, setStockLoaded] = useState(false);
   const [stock, setStock] = useState<StockItem[]>(() => {
     const saved = safeLocalStorage.getItem('mdf_stock');
-    if (saved) return JSON.parse(saved);
-    return [];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {
+        console.warn("Error parsing cached stock:", e);
+      }
+    }
+    // Instant fallback so the public catalog and system catalog load in 0ms!
+    return INITIAL_MASTER_STOCK.map(item => ({
+      ...item,
+      id: item.codigo.trim().toUpperCase(),
+      disponible: (item.stockActual || 0) > 0,
+      categoria: (item as any).categoria || 'FARDO'
+    }));
   });
 
   const [staff, setStaff] = useState<StaffMember[]>(() => {
@@ -574,15 +589,27 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
   });
   
   const [carriers, setCarriers] = useState<string[]>(() => {
-    const saved = safeLocalStorage.getItem('mdf_carriers');
-    return saved ? JSON.parse(saved) : [
+    const defaultCarriers = [
+      'Transporte MERCADO LIBRE',
+      'Transporte propio',
+      'Transportes Tamarindo',
+      'Bluexpress',
       'Isaias Peralta',
       'Anthony Mendez',
       'Ariel Echeverria',
       'Gonzalo Duarte',
-      'Transportes Tamarindo',
       'Transportes Runn'
     ];
+    const saved = safeLocalStorage.getItem('mdf_carriers');
+    if (saved) {
+      try {
+        const parsed: string[] = JSON.parse(saved);
+        return Array.from(new Set([...defaultCarriers, ...parsed]));
+      } catch (e) {
+        return defaultCarriers;
+      }
+    }
+    return defaultCarriers;
   });
   
   const [adjustments, setAdjustments] = useState<CommissionAdjustment[]>(() => {
@@ -807,7 +834,15 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
           setSales(salesData);
         });
         unsubStock = onSnapshot(collection(db, 'stock'), (snap) => {
-          setStock(snap.docs.map(d => d.data() as StockItem));
+          if (!snap.empty) {
+            const stockData = snap.docs.map(d => d.data() as StockItem);
+            setStock(stockData);
+            safeLocalStorage.setItem('mdf_stock', JSON.stringify(stockData));
+          }
+          setStockLoaded(true);
+        }, (error) => {
+          console.warn("Error streaming live stock from Firestore:", error);
+          setStockLoaded(true);
         });
         unsubStaff = onSnapshot(collection(db, 'staff'), (snap) => {
           setStaff(snap.docs.map(d => d.data() as StaffMember));
@@ -963,6 +998,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       estadoDespacho: DispatchStatus.PREPARACION,
       itemsDespachados: 0,
       tipoDespacho: saleData.tipoDespacho || '',
+      metodoDespacho: saleData.metodoDespacho || '',
       timestamp: now.toISOString(),
       tipoComision: saleData.tipoComision || (saleData.codigoFardo ? calculateCommission(saleData.codigoFardo) : CommissionType.FARDO_NORMAL),
       items: enrichedItems || saleData.items,
@@ -1947,7 +1983,8 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       addStockItem, updateStockItem, togglePromocion, removeStockItem, bulkAddStock, fixDuplicateStock, fixDuplicateStockByName, purgeUnusedStock, resetToMasterStock, addStaff, updateStaff, removeStaff, addCustomer, updateCustomer, removeCustomer, deleteSale, deleteAllSales,
       addPurchase, removePurchase, addAbono, removeAbono, getStats, getReportData, syncWithCloud, pushToCloud, isSyncing, lastSync: settings.lastSync,
       productionRecords, addProductionRecord, deleteProductionRecord,
-      stockHistory, addStockHistoryEvent
+      stockHistory, addStockHistoryEvent,
+      stockLoaded
     }}>
       {children}
     </StoreContext.Provider>

@@ -17,9 +17,7 @@ import {
   Clipboard, 
   CheckCircle2 
 } from 'lucide-react';
-import { StaffRole, Coupon } from '../types';
-
-const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
+import { StaffRole, Coupon, LOGO_URL, BRAND_NAME, COMPANY_NAME } from '../types';
 
 export default function PostVenta() {
   const { 
@@ -291,10 +289,10 @@ export default function PostVenta() {
       doc.setFont("Helvetica", "bold");
       doc.setFontSize(14);
       doc.setTextColor(16, 185, 129);
-      doc.text("E&C", 50, 20, { align: 'center' });
+      doc.text("EL MUNDO TECH", 50, 20, { align: 'center' });
       doc.setFontSize(8);
       doc.setTextColor(148, 163, 184);
-      doc.text("ECHEVERRIA & CO.", 50, 25, { align: 'center' });
+      doc.text("ECHEVERRIA & COMPAÑIA", 50, 25, { align: 'center' });
     }
 
     doc.setFont("Helvetica", "bold");
@@ -388,7 +386,7 @@ export default function PostVenta() {
     doc.setFont("Helvetica", "bolditalic");
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184); // slate-400
-    doc.text(`¡Gracias por preferir Echeverria & Co.!`, 50, 135, { align: 'center' });
+    doc.text(`¡Gracias por preferir EL MUNDO TECH (Echeverria & Cía.)!`, 50, 135, { align: 'center' });
 
     doc.save(`cupon_${coupon.code}.pdf`);
   };
@@ -681,8 +679,8 @@ export default function PostVenta() {
                     }}
                   />
                   <div>
-                    <h3 className="font-black text-slate-800 tracking-tight text-sm">ECHEVERRIA & CO.</h3>
-                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Post-Venta Compensaciones</p>
+                    <h3 className="font-black text-slate-800 tracking-tight text-sm">EL MUNDO TECH</h3>
+                    <p className="text-[10px] font-bold text-slate-400 tracking-widest uppercase">Echeverria & Cía. • Compensaciones</p>
                   </div>
                 </div>
 

@@ -1,17 +1,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Printer, ArrowLeft, CheckCircle2, AlertCircle, User, X } from 'lucide-react';
+import { 
+  Printer, 
+  ArrowLeft, 
+  CheckCircle2, 
+  AlertCircle, 
+  User, 
+  X,
+  LayoutGrid,
+  Truck,
+  FileText,
+  SlidersHorizontal
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../store/GlobalContext';
-import { Sale, SaleType, SaleStatus, CommissionType, StaffRole } from '../types';
-
-const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
-
-// Update Etiqueta.tsx to handle loop over items if present, otherwise single item.
-
-// I will re-implement the Label rendering in a more flexible way to handle multiple items.
-// Actually, it's better to create a new component or simply update the existing one.
-// Let's update Etiquetas.tsx.
+import { Sale, SaleType, SaleStatus, CommissionType, StaffRole, LOGO_URL, LabelFormat, DispatchType } from '../types';
 
 import { Label } from '../components/Label';
 
@@ -26,6 +29,15 @@ export default function Etiquetas() {
   const [showEtiquetadorModal, setShowEtiquetadorModal] = useState(false);
   const [etiquetadorName, setEtiquetadorName] = useState('');
   const [pendingSaleId, setPendingSaleId] = useState<string | null>(null); // 'all' for print all
+  const [labelFormat, setLabelFormat] = useState<LabelFormat>(() => {
+    return (localStorage.getItem('preferred_label_format') as LabelFormat) || 'logistica';
+  });
+
+  const handleFormatChange = (fmt: LabelFormat) => {
+    setLabelFormat(fmt);
+    localStorage.setItem('preferred_label_format', fmt);
+  };
+
   const isAdmin = currentUser?.rol === StaffRole.ADMIN;
   const readyToPrint = sales.filter(s => {
     if (!s) return false;
@@ -47,12 +59,28 @@ export default function Etiquetas() {
 
   // Fix: Added missing tipoComision property to satisfy the Sale interface
   const demoSale: Sale = {
-    id: 'demo', numeroVenta: 9999, tipoVenta: SaleType.NORMAL, cliente: 'CLIENTE DE PRUEBA',
-    telefono: '+569 1234 5678', rut: '12.345.678-9', codigoFardo: 'F-DEMO',
-    direccion: 'AVENIDA CENTRAL 123, SANTIAGO', variante: 'FARDO PREMIUM',
-    total: 150000, datosCompletos: true, enviado: false, status: SaleStatus.PENDIENTE,
-    fecha: new Date().toLocaleDateString(), hora: '12:00', vendedor: 'ADMIN',
-    valorUnitario: 150000, cantidad: 1, estadoPago: 'Pagado', observaciones: '',
+    id: 'demo', 
+    numeroVenta: 1042, 
+    tipoVenta: SaleType.NORMAL, 
+    cliente: 'JUAN IGNACIO PÉREZ GONZÁLEZ',
+    telefono: '+56987654321', 
+    rut: '18.452.319-K', 
+    codigoFardo: 'F-PREMIUM-01',
+    direccion: 'AV. PROVIDENCIA 1234, DEPTO 502, PROVIDENCIA, SANTIAGO', 
+    variante: 'FARDO PREMIUM ROPA AMERICANA',
+    metodoDespacho: 'STARKEN EXPRESS',
+    tipoDespacho: DispatchType.DOMICILIO,
+    total: 185000, 
+    datosCompletos: true, 
+    enviado: false, 
+    status: SaleStatus.PENDIENTE,
+    fecha: new Date().toLocaleDateString(), 
+    hora: '14:30', 
+    vendedor: 'ADMINISTRACIÓN',
+    valorUnitario: 185000, 
+    cantidad: 1, 
+    estadoPago: 'Pagado', 
+    observaciones: 'Conserjería 24 hrs. Llamar antes de entregar.',
     tipoComision: CommissionType.FARDO_NORMAL
   };
 
@@ -133,7 +161,7 @@ export default function Etiquetas() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between no-print gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Centro de Etiquetado</h2>
@@ -159,11 +187,77 @@ export default function Etiquetas() {
           </button>
         </div>
       </div>
+
+      {/* Selector de Formato de Etiqueta */}
+      <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 no-print shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black">
+            <SlidersHorizontal size={18} />
+          </div>
+          <div>
+            <h4 className="text-xs font-black uppercase text-slate-800 tracking-wider">
+              Formato de Etiqueta (100x150 mm)
+            </h4>
+            <p className="text-[11px] font-medium text-slate-500">
+              Personaliza el diseño, tamaño de tipografía y recuadros divisorios
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => handleFormatChange('logistica')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 border ${
+              labelFormat === 'logistica'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-emerald-500/30'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <LayoutGrid size={14} className={labelFormat === 'logistica' ? 'text-emerald-400' : 'text-slate-500'} />
+            <span>Cuadrícula Logística</span>
+            <span className={`text-[9px] px-1.5 py-0.2 rounded font-black uppercase ${
+              labelFormat === 'logistica' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'
+            }`}>
+              Recomendado
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleFormatChange('industrial')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 border ${
+              labelFormat === 'industrial'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-emerald-500/30'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Truck size={14} className={labelFormat === 'industrial' ? 'text-amber-400' : 'text-slate-500'} />
+            <span>Industrial / Alto Contraste</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleFormatChange('clasica')}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-2 border ${
+              labelFormat === 'clasica'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-emerald-500/30'
+                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <FileText size={14} className={labelFormat === 'clasica' ? 'text-blue-400' : 'text-slate-500'} />
+            <span>Clásica Mejorada</span>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 justify-items-center no-print pb-20">
         {showDemo && (
           <div className="relative group w-full flex flex-col items-center">
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-amber-500 text-white text-[10px] font-black px-4 py-1 rounded-full shadow-lg">ETIQUETA DE MUESTRA</div>
-            <div className="relative bg-white p-4 border-4 border-amber-200 rounded-[32px] shadow-lg scale-[0.5] origin-top overflow-hidden"><Label sale={demoSale} stock={stock} /></div>
+            <div className="relative bg-white p-4 border-4 border-amber-200 rounded-[32px] shadow-lg scale-[0.5] origin-top overflow-hidden">
+              <Label sale={demoSale} stock={stock} format={labelFormat} />
+            </div>
           </div>
         )}
         {readyToPrint.map((sale) => (
@@ -179,7 +273,7 @@ export default function Etiquetas() {
                   )}
                 </div>
               )}
-              <Label sale={sale} stock={stock} />
+              <Label sale={sale} stock={stock} format={labelFormat} />
               <div className="absolute inset-0 bg-slate-900/80 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-sm">
                 <button onClick={() => handlePrintSingle(sale)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-2xl font-black flex items-center gap-3 shadow-2xl transition-all">
                   <Printer size={20} /> IMPRIMIR {sale.impresa ? 'OTRA VEZ' : 'AHORA'}
@@ -199,9 +293,11 @@ export default function Etiquetas() {
       </div>
       <div className="hidden print-only">
         {salesToPrint.map((sale) => (
-          <div key={sale.id} className="label-container">
-            <Label sale={sale} stock={stock} />
-          </div>
+          (sale.items && sale.items.length > 0 ? sale.items : [{ codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 }]).map((item, idx) => (
+            <div key={`${sale.id}-${idx}`} className="label-container">
+              <Label sale={sale} stock={stock} item={item} format={labelFormat} />
+            </div>
+          ))
         ))}
       </div>
 

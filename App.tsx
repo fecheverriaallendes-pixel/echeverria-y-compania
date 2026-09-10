@@ -42,7 +42,7 @@ import Produccion from './pages/Produccion';
 import Cheques from './pages/Cheques';
 import TransportistaView from './pages/TransportistaView';
 import { useStore } from './store/GlobalContext';
-import { StaffRole } from './types';
+import { StaffRole, LOGO_URL, BRAND_NAME, COMPANY_NAME } from './types';
 
 const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) => {
   const location = useLocation();
@@ -77,10 +77,22 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
     <>
       {isOpen && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={toggle} />}
       <aside className={`fixed top-0 left-0 z-50 h-screen w-64 bg-slate-900 text-white transition-transform duration-300 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 shadow-2xl flex flex-col no-print`}>
-        <div className="p-5 flex items-center justify-between border-b border-slate-800">
-          <Link to="/" onClick={() => playSound('transition')} className="text-[15px] sm:text-base font-black tracking-tighter flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
-            <span className="bg-emerald-500 px-1.5 py-1 rounded-lg text-white font-black text-[10px]">E&C</span>
-            ECHEVERRIA <span className="text-emerald-500 italic">& CO.</span>
+        <div className="p-4 flex items-center justify-between border-b border-slate-800">
+          <Link to="/" onClick={() => playSound('transition')} className="flex items-center gap-3 overflow-hidden">
+            <img 
+              src={LOGO_URL} 
+              alt={BRAND_NAME} 
+              referrerPolicy="no-referrer"
+              className="w-10 h-10 rounded-xl object-contain bg-white p-1 shadow-md flex-shrink-0" 
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[13px] font-black tracking-tight text-white uppercase leading-tight truncate">
+                EL MUNDO <span className="text-emerald-400 italic">TECH</span>
+              </span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                Echeverria & Cía.
+              </span>
+            </div>
           </Link>
           <button onClick={toggle} className="lg:hidden p-1 text-slate-400 hover:text-white flex-shrink-0"><X size={20} /></button>
         </div>
@@ -129,15 +141,25 @@ const Header = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-30 no-print">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <button onClick={toggleSidebar} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
           <Menu size={24} />
         </button>
-        <div className="hidden sm:flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
+        <div className="flex items-center gap-2 lg:hidden">
+          <img 
+            src={LOGO_URL} 
+            alt={BRAND_NAME} 
+            referrerPolicy="no-referrer"
+            className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 p-0.5" 
+          />
+          <span className="text-xs font-black text-slate-900 uppercase tracking-tight">EL MUNDO <span className="text-emerald-500">TECH</span></span>
+        </div>
+        <div className="hidden sm:flex items-center gap-3 px-4 py-1.5 bg-slate-50 rounded-full border border-slate-100">
            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-             Firebase Activo
-             <Activity size={12} className="text-emerald-500" />
+           <span className="text-[10px] font-black text-slate-700 uppercase tracking-wider flex items-center gap-2">
+             <span className="font-extrabold text-slate-900">{BRAND_NAME}</span>
+             <span className="text-slate-400 font-medium">({COMPANY_NAME})</span>
+             <Activity size={12} className="text-emerald-500 ml-1" />
            </span>
         </div>
       </div>
@@ -263,46 +285,54 @@ const BottomNav = ({ toggleSidebar }: { toggleSidebar: () => void }) => {
   );
 };
 
-export default function App() {
+function AppLayout() {
   const { currentUser } = useStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const location = useLocation();
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  const isPublicCatalog = location.pathname === '/catalogo-publico';
+
+  return (
+    <div className="h-screen bg-slate-50 overflow-hidden relative">
+      {currentUser && !isPublicCatalog && <Sidebar isOpen={sidebarOpen} toggle={toggleSidebar} />}
+      
+      <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${currentUser && !isPublicCatalog ? 'lg:ml-64' : ''}`}>
+        {currentUser && !isPublicCatalog && <Header toggleSidebar={toggleSidebar} />}
+        
+        <main className={`flex-1 overflow-y-auto scroll-smooth ${isPublicCatalog ? 'p-0 pb-0 w-full h-full' : 'p-4 md:p-8 pb-24 lg:pb-8'}`}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/catalogo-publico" element={<CatalogoPublico />} />
+            <Route path="/dashboard" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Dashboard /></ProtectedRoute>} />
+            <Route path="/catalogo" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><Catalogo /></ProtectedRoute>} />
+            <Route path="/registrar" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><RegistrarVenta /></ProtectedRoute>} />
+            <Route path="/ventas" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><Ventas /></ProtectedRoute>} />
+            <Route path="/stock" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.BODEGA, StaffRole.DESPACHO]}><Stock /></ProtectedRoute>} />
+            <Route path="/transportista" element={<ProtectedRoute roles={[StaffRole.TRANSPORTISTA, StaffRole.ADMIN]}><TransportistaView /></ProtectedRoute>} />
+            <Route path="/despachos" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR, StaffRole.BODEGA, StaffRole.DESPACHO]}><Despachos /></ProtectedRoute>} />
+            <Route path="/produccion" element={<ProtectedRoute roles={[StaffRole.ADMIN]} extraCheck={(u) => (u?.nombre || '').toUpperCase() === 'CAMILA VIVAR'}><Produccion /></ProtectedRoute>} />
+            <Route path="/crm" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><CRM /></ProtectedRoute>} />
+            <Route path="/post-venta" element={<ProtectedRoute roles={[StaffRole.POST_VENTA, StaffRole.ADMIN]}><PostVenta /></ProtectedRoute>} />
+            <Route path="/etiquetas" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR, StaffRole.BODEGA, StaffRole.DESPACHO]}><Etiquetas /></ProtectedRoute>} />
+            <Route path="/configuracion" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Configuracion /></ProtectedRoute>} />
+            <Route path="/comisiones" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Comisiones /></ProtectedRoute>} />
+            <Route path="/cheques" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Cheques /></ProtectedRoute>} />
+            <Route path="/proveedores" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Proveedores /></ProtectedRoute>} />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </main>
+        
+        {currentUser && !isPublicCatalog && <BottomNav toggleSidebar={toggleSidebar} />}
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
   return (
     <HashRouter>
-      <div className="h-screen bg-slate-50 overflow-hidden relative">
-        {currentUser && <Sidebar isOpen={sidebarOpen} toggle={toggleSidebar} />}
-        
-        <div className={`flex flex-col h-full overflow-hidden transition-all duration-300 ${currentUser ? 'lg:ml-64' : ''}`}>
-          {currentUser && <Header toggleSidebar={toggleSidebar} />}
-          
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 lg:pb-8 scroll-smooth">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/catalogo-publico" element={<CatalogoPublico />} />
-              <Route path="/dashboard" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Dashboard /></ProtectedRoute>} />
-              <Route path="/catalogo" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><Catalogo /></ProtectedRoute>} />
-              <Route path="/registrar" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><RegistrarVenta /></ProtectedRoute>} />
-              <Route path="/ventas" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><Ventas /></ProtectedRoute>} />
-              <Route path="/stock" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.BODEGA, StaffRole.DESPACHO]}><Stock /></ProtectedRoute>} />
-              <Route path="/transportista" element={<ProtectedRoute roles={[StaffRole.TRANSPORTISTA, StaffRole.ADMIN]}><TransportistaView /></ProtectedRoute>} />
-              <Route path="/despachos" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR, StaffRole.BODEGA, StaffRole.DESPACHO]}><Despachos /></ProtectedRoute>} />
-              <Route path="/produccion" element={<ProtectedRoute roles={[StaffRole.ADMIN]} extraCheck={(u) => (u?.nombre || '').toUpperCase() === 'CAMILA VIVAR'}><Produccion /></ProtectedRoute>} />
-              <Route path="/crm" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><CRM /></ProtectedRoute>} />
-              <Route path="/post-venta" element={<ProtectedRoute roles={[StaffRole.POST_VENTA, StaffRole.ADMIN]}><PostVenta /></ProtectedRoute>} />
-              <Route path="/etiquetas" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR, StaffRole.BODEGA, StaffRole.DESPACHO]}><Etiquetas /></ProtectedRoute>} />
-              <Route path="/configuracion" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Configuracion /></ProtectedRoute>} />
-              <Route path="/comisiones" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Comisiones /></ProtectedRoute>} />
-              <Route path="/cheques" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Cheques /></ProtectedRoute>} />
-              <Route path="/proveedores" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Proveedores /></ProtectedRoute>} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </main>
-          
-          {currentUser && <BottomNav toggleSidebar={toggleSidebar} />}
-        </div>
-      </div>
+      <AppLayout />
     </HashRouter>
   );
 }

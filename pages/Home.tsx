@@ -33,9 +33,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StaffRole } from '../types';
-
-const LOGO_URL = "https://i.ibb.co/ymf3nYWv/Chat-GPT-Image-10-jun-2026-18-30-56.png";
+import { StaffRole, BRAND_NAME, COMPANY_NAME, LOGO_URL } from '../types';
 
 export default function Home() {
   const { staff, stock, currentUser, login, playSound, settings, updateSettings, syncWithCloud, isSyncing } = useStore();
@@ -192,8 +190,21 @@ export default function Home() {
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-500/20 blur-[150px] rounded-full animate-pulse delay-700"></div>
 
         <div className="w-full max-w-lg z-10 animate-in fade-in zoom-in duration-1000 flex flex-col items-center">
-          <div className="text-center -mt-8 sm:-mt-12 md:-mt-16 -mb-6 sm:-mb-10 md:-mb-12 drop-shadow-2xl transition-transform">
-            <img src={LOGO_URL} alt="Logo" className="w-64 sm:w-80 md:w-[360px] mx-auto drop-shadow-2xl" />
+          <div className="text-center mb-6 drop-shadow-2xl transition-transform flex flex-col items-center">
+            <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-[28px] bg-white/95 p-3 shadow-2xl border-2 border-white/30 flex items-center justify-center mb-3">
+              <img 
+                src={LOGO_URL} 
+                alt={BRAND_NAME} 
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-contain" 
+              />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
+              EL MUNDO <span className="text-emerald-400 italic">TECH</span>
+            </h2>
+            <p className="text-[11px] font-black text-white/70 uppercase tracking-[0.25em] mt-0.5">
+              {COMPANY_NAME}
+            </p>
           </div>
 
           <div className="w-full max-w-md bg-white/10 backdrop-blur-3xl p-6 sm:p-8 rounded-[40px] shadow-2xl border border-white/20">
@@ -268,12 +279,22 @@ export default function Home() {
         }}
       />
 
-      <div className="text-center mb-10 animate-in fade-in zoom-in duration-700 z-10 relative">
-        <img src={LOGO_URL} alt="Logo" className="w-[320px] sm:w-[460px] md:w-[500px] mx-auto mb-1.5 drop-shadow-2xl" />
-        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-wide mb-2 uppercase">
-          BIENVENIDO A <span className="text-emerald-400 italic">ECHEVERRIA & CO.</span>
+      <div className="text-center mb-10 animate-in fade-in zoom-in duration-700 z-10 relative flex flex-col items-center">
+        <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-[32px] bg-white/95 p-4 shadow-2xl border-2 border-white/20 flex items-center justify-center mb-4">
+          <img 
+            src={LOGO_URL} 
+            alt={BRAND_NAME} 
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-contain" 
+          />
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-black text-white tracking-wide mb-1 uppercase">
+          BIENVENIDO A <span className="text-emerald-400 italic">EL MUNDO TECH</span>
         </h1>
-        <p className="text-slate-300 font-bold uppercase tracking-[0.4em] text-[10px] mb-8">Central de Inteligencia Logística</p>
+        <p className="text-slate-300 font-bold uppercase tracking-[0.25em] text-[11px] mb-1">
+          {COMPANY_NAME}
+        </p>
+        <p className="text-emerald-400/80 font-bold uppercase tracking-[0.4em] text-[9px] mb-6">Central de Inteligencia Logística</p>
         
         <div className="inline-flex items-center gap-3 px-6 py-2 bg-emerald-950/40 border border-emerald-500/30 rounded-full shadow-lg mb-2 backdrop-blur-sm">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]"></div>

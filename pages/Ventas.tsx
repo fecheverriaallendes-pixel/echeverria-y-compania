@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from 'react';
-import { Search, Phone, CheckCircle2, AlertCircle, X, Save, MapPin, CreditCard, UserCheck, Tag, Info, FileEdit, BadgeDollarSign, Truck, Building2, Home, Package, Trash2, Camera } from 'lucide-react';
+import { Search, Phone, CheckCircle2, AlertCircle, X, Save, MapPin, CreditCard, UserCheck, Tag, Info, FileEdit, BadgeDollarSign, Truck, Building2, Home, Package, Trash2, Camera, ShoppingBag, Store } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { SaleStatus, SaleType, Sale, DispatchType, StaffRole } from '../types';
+import { SaleStatus, SaleType, Sale, DispatchType, StaffRole, DispatchMethod, DISPATCH_OPTIONS } from '../types';
 import { Label } from '../components/Label';
 import { Invoice } from '../components/Invoice';
 
@@ -92,12 +92,21 @@ export default function Ventas() {
     e.preventDefault();
     if (!editingSale) return;
     
-    // Ensure dispatch type is set, default to AGENCIA if not selected
+    const selectedMethod = editingSale.metodoDespacho || (
+      editingSale.tipoDespacho === DispatchType.RETIRO ? DispatchMethod.RETIRO_LOCAL :
+      editingSale.tipoDespacho === DispatchType.AGENCIA ? DispatchMethod.BLUEXPRESS :
+      DispatchMethod.TRANSPORTE_PROPIO
+    );
+    const matchingOption = DISPATCH_OPTIONS.find(o => o.label === selectedMethod || o.id === selectedMethod);
+
     const finalSale = {
       ...editingSale,
       datosCompletos: true,
       status: editingSale.status === SaleStatus.PENDIENTE ? SaleStatus.PENDIENTE : editingSale.status,
-      tipoDespacho: editingSale.tipoDespacho || DispatchType.AGENCIA
+      tipoDespacho: editingSale.tipoDespacho || matchingOption?.type || DispatchType.DOMICILIO,
+      metodoDespacho: selectedMethod,
+      transportista: editingSale.transportista || matchingOption?.carrier || '',
+      agencia: editingSale.agencia || matchingOption?.agency || ''
     };
 
     updateSale(editingSale.id, finalSale);
@@ -280,6 +289,11 @@ export default function Ventas() {
                         <Phone size={14} /> {sale.telefono}
                       </a>
                       <span className="text-[9px] text-slate-400 font-bold uppercase mt-1">Vendedor: {sale.vendedor || 'Desconocido'}</span>
+                      {sale.metodoDespacho && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-extrabold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md mt-1 w-fit">
+                          <Truck size={10} /> {sale.metodoDespacho}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-8 py-6">
@@ -510,35 +524,61 @@ export default function Ventas() {
                 <textarea required className="w-full px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-[24px] font-black text-lg uppercase resize-y min-h-[160px]" placeholder="CALLE, N°, COMUNA, REGIÓN" value={editingSale.direccion || ''} onChange={(e) => setEditingSale({...editingSale, direccion: e.target.value.toUpperCase()})}/>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block flex items-center gap-2">
-                  <Truck size={14} className="text-blue-500" /> Tipo de Entrega
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 flex items-center gap-2">
+                  <Truck size={14} className="text-blue-500" /> Método de Despacho (5 Opciones)
                 </label>
-                <div className="flex bg-slate-50 p-1.5 rounded-[24px] border-2 border-slate-100">
-                  <button 
-                    type="button"
-                    onClick={() => setEditingSale({...editingSale, tipoDespacho: DispatchType.AGENCIA})}
-                    className={`flex-1 py-3 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${editingSale.tipoDespacho === DispatchType.AGENCIA ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-200'}`}
-                  >
-                    <Building2 size={16} /> Agencia
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setEditingSale({...editingSale, tipoDespacho: DispatchType.DOMICILIO})}
-                    className={`flex-1 py-3 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${editingSale.tipoDespacho === DispatchType.DOMICILIO ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-200'}`}
-                  >
-                    <Home size={16} /> Domicilio
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setEditingSale({...editingSale, tipoDespacho: DispatchType.RETIRO})}
-                    className={`flex-1 py-3 rounded-[20px] font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${editingSale.tipoDespacho === DispatchType.RETIRO ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:bg-slate-200'}`}
-                  >
-                    <Package size={16} /> Retiro
-                  </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {DISPATCH_OPTIONS.map((opt) => {
+                    const isSelected = editingSale.metodoDespacho === opt.label || (!editingSale.metodoDespacho && editingSale.tipoDespacho === opt.type && (opt.id === DispatchMethod.TRANSPORTE_PROPIO || opt.id === DispatchMethod.BLUEXPRESS || opt.id === DispatchMethod.RETIRO_LOCAL));
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          playSound('click');
+                          let newDir = editingSale.direccion || '';
+                          if (opt.id === DispatchMethod.RETIRO_LOCAL && (!newDir || newDir.trim() === '')) {
+                            newDir = 'RETIRO EN LOCAL';
+                          }
+                          setEditingSale({
+                            ...editingSale,
+                            metodoDespacho: opt.label,
+                            tipoDespacho: opt.type,
+                            transportista: opt.carrier,
+                            agencia: opt.agency,
+                            direccion: newDir
+                          });
+                        }}
+                        className={`p-3 rounded-2xl border-2 text-left transition-all flex items-center justify-between gap-3 ${
+                          isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-slate-400/30'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`p-1.5 rounded-lg ${isSelected ? 'bg-white/20 text-white' : 'bg-white text-slate-600'}`}>
+                            {opt.id === DispatchMethod.MERCADO_LIBRE && <ShoppingBag size={15} />}
+                            {opt.id === DispatchMethod.TRANSPORTE_PROPIO && <Home size={15} />}
+                            {opt.id === DispatchMethod.TAMARINDO && <Truck size={15} />}
+                            {opt.id === DispatchMethod.BLUEXPRESS && <Building2 size={15} />}
+                            {opt.id === DispatchMethod.RETIRO_LOCAL && <Store size={15} />}
+                          </span>
+                          <span className="font-black text-xs uppercase leading-tight">{opt.label}</span>
+                        </div>
+                        {isSelected && <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
-                {editingSale.tipoDespacho === DispatchType.AGENCIA && (
-                  <input required type="text" className="w-full mt-4 px-7 py-4 bg-slate-50 border-2 border-slate-100 rounded-[24px] font-black uppercase" placeholder="NOMBRE DE LA AGENCIA" value={editingSale.agencia || ''} onChange={(e) => setEditingSale({...editingSale, agencia: e.target.value.toUpperCase()})}/>
+                {editingSale.metodoDespacho === DispatchMethod.BLUEXPRESS && (
+                  <input 
+                    type="text" 
+                    className="w-full mt-2 px-5 py-3 bg-slate-50 border-2 border-slate-100 rounded-2xl font-black uppercase text-xs outline-none focus:border-blue-500" 
+                    placeholder="SUCURSAL BLUEXPRESS O DESTINO REGIONAL" 
+                    value={editingSale.agencia || ''} 
+                    onChange={(e) => setEditingSale({...editingSale, agencia: e.target.value.toUpperCase()})}
+                  />
                 )}
               </div>
 

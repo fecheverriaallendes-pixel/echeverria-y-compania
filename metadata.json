@@ -1,5 +1,6 @@
 {
-  "name": "Echeverria \u0026 Co - Gestión de Ventas",
-  "description": "Aplicación web profesional para la gestión de ventas, stock, despachos y etiquetas de un negocio de Importación y exportación.",
-  "requestFramePermissions": []
+  "name": "Echeverria & Co - Gestión de Ventas",
+  "description": "Sistema de gestión integral de ventas, stock, logística y catálogos para EL MUNDO TECH (Echeverria & Compañía).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

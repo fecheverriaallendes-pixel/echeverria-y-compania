@@ -1,4 +1,10 @@
 
+export const COMPANY_NAME = "Echeverria & Compañía";
+export const BRAND_NAME = "EL MUNDO TECH";
+export const LOGO_URL = "https://i.ibb.co/zhzn8fXD/Whats-App-Image-2026-07-16-at-16-49-01.jpg";
+
+export type LabelFormat = 'logistica' | 'industrial' | 'clasica';
+
 export interface Customer {
   id: string;
   nombre: string;
@@ -20,6 +26,72 @@ export enum DispatchType {
   DOMICILIO = 'Domicilio',
   RETIRO = 'Retiro en Bodega'
 }
+
+export enum DispatchMethod {
+  MERCADO_LIBRE = 'Transporte MERCADO LIBRE',
+  TRANSPORTE_PROPIO = 'Transporte propio (despacho a domicilio)',
+  TAMARINDO = 'Transportes Tamarindo',
+  BLUEXPRESS = 'Bluexpress (para regiones)',
+  RETIRO_LOCAL = 'Retiro en local'
+}
+
+export interface DispatchOptionDef {
+  id: DispatchMethod;
+  label: string;
+  shortLabel: string;
+  type: DispatchType;
+  carrier: string;
+  agency: string;
+  description: string;
+}
+
+export const DISPATCH_OPTIONS: DispatchOptionDef[] = [
+  {
+    id: DispatchMethod.MERCADO_LIBRE,
+    label: 'Transporte MERCADO LIBRE',
+    shortLabel: 'Mercado Libre',
+    type: DispatchType.DOMICILIO,
+    carrier: 'Transporte MERCADO LIBRE',
+    agency: 'MERCADO LIBRE',
+    description: 'Envío coordinado por Mercado Libre'
+  },
+  {
+    id: DispatchMethod.TRANSPORTE_PROPIO,
+    label: 'Transporte propio (despacho a domicilio)',
+    shortLabel: 'Transporte Propio',
+    type: DispatchType.DOMICILIO,
+    carrier: 'Transporte propio',
+    agency: '',
+    description: 'Despacho a domicilio con móvil/chofer propio'
+  },
+  {
+    id: DispatchMethod.TAMARINDO,
+    label: 'Transportes Tamarindo',
+    shortLabel: 'Tamarindo',
+    type: DispatchType.DOMICILIO,
+    carrier: 'Transportes Tamarindo',
+    agency: '',
+    description: 'Entrega externa con Transportes Tamarindo'
+  },
+  {
+    id: DispatchMethod.BLUEXPRESS,
+    label: 'Bluexpress (para regiones)',
+    shortLabel: 'Bluexpress',
+    type: DispatchType.AGENCIA,
+    carrier: 'Bluexpress',
+    agency: 'Bluexpress (para regiones)',
+    description: 'Envío por encomienda / agencia para regiones'
+  },
+  {
+    id: DispatchMethod.RETIRO_LOCAL,
+    label: 'Retiro en local',
+    shortLabel: 'Retiro en local',
+    type: DispatchType.RETIRO,
+    carrier: '',
+    agency: '',
+    description: 'Retiro directo del cliente en local/bodega'
+  }
+];
 
 export enum DispatchStatus {
   PREPARACION = 'En Preparación',
@@ -156,6 +228,7 @@ export interface Sale {
   
   // Nuevos campos para gestión logística
   tipoDespacho?: DispatchType;
+  metodoDespacho?: string; // e.g. Transporte MERCADO LIBRE, Transporte propio (despacho a domicilio), etc.
   estadoDespacho?: DispatchStatus;
   itemsDespachados?: number; // Cantidad verificada/escaneada
   agencia?: string; // Starken, Chilexpress, BlueExpress, etc.

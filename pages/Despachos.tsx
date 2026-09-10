@@ -78,16 +78,17 @@ export default function Despachos() {
         s.numeroVenta.toString().includes(search) ||
         s.codigoFardo?.toLowerCase().includes(search) ||
         (s.transportista?.toLowerCase().includes(search) ?? false) ||
-        (s.agencia?.toLowerCase().includes(search) ?? false)
+        (s.agencia?.toLowerCase().includes(search) ?? false) ||
+        (s.metodoDespacho?.toLowerCase().includes(search) ?? false)
       );
     }
     
     return true;
   });
 
-  const agencySales = filteredBase.filter(s => s.status === SaleStatus.PENDIENTE && s.tipoDespacho === DispatchType.AGENCIA && (s.juntaCompra === 'DESPACHO INMEDIATO' || !s.juntaCompra));
-  const homeSales = filteredBase.filter(s => s.status === SaleStatus.PENDIENTE && s.tipoDespacho === DispatchType.DOMICILIO && (s.juntaCompra === 'DESPACHO INMEDIATO' || !s.juntaCompra));
-  const withdrawalSales = filteredBase.filter(s => s.status === SaleStatus.PENDIENTE && (s.tipoDespacho === DispatchType.RETIRO || (s.juntaCompra && s.juntaCompra !== 'DESPACHO INMEDIATO')));
+  const agencySales = filteredBase.filter(s => s.status === SaleStatus.PENDIENTE && (s.tipoDespacho === DispatchType.AGENCIA || s.metodoDespacho === 'Bluexpress (para regiones)') && (s.juntaCompra === 'DESPACHO INMEDIATO' || !s.juntaCompra));
+  const homeSales = filteredBase.filter(s => s.status === SaleStatus.PENDIENTE && (s.tipoDespacho === DispatchType.DOMICILIO || s.metodoDespacho === 'Transporte MERCADO LIBRE' || s.metodoDespacho === 'Transporte propio (despacho a domicilio)' || s.metodoDespacho === 'Transportes Tamarindo') && (s.juntaCompra === 'DESPACHO INMEDIATO' || !s.juntaCompra));
+  const withdrawalSales = filteredBase.filter(s => s.status === SaleStatus.PENDIENTE && (s.tipoDespacho === DispatchType.RETIRO || s.metodoDespacho === 'Retiro en local' || (s.juntaCompra && s.juntaCompra !== 'DESPACHO INMEDIATO')));
   const historySales = filteredBase.filter(s => s.status === SaleStatus.ENVIADO);
   
   let currentList = activeTab === 'AGENCIA' ? agencySales 
@@ -96,7 +97,7 @@ export default function Despachos() {
                     : historySales;
 
   if (transportistaFilter) {
-      currentList = currentList.filter(s => s.transportista === transportistaFilter);
+      currentList = currentList.filter(s => s.transportista === transportistaFilter || s.metodoDespacho === transportistaFilter);
   }
 
   // Sorting
@@ -116,7 +117,10 @@ export default function Despachos() {
         "Telefono": s.telefono,
         "Producto": s.codigoFardo,
         "Cant": s.cantidad,
-        "Tipo": s.tipoDespacho || 'N/A',
+        "Tipo_Despacho": s.tipoDespacho || 'N/A',
+        "Metodo_Despacho": s.metodoDespacho || s.transportista || s.agencia || s.tipoDespacho || 'N/A',
+        "Transportista": s.transportista || 'N/A',
+        "Agencia": s.agencia || 'N/A',
         "Status": s.status
       }));
 
@@ -152,7 +156,7 @@ export default function Despachos() {
       alert(`Error: La cantidad verificada (${sale.itemsDespachados || 0}) no coincide con la venta (${sale.cantidad}).`);
       return;
     }
-    if ((sale.tipoDespacho === DispatchType.DOMICILIO || sale.tipoDespacho === DispatchType.AGENCIA) && !sale.transportista) {
+    if ((sale.tipoDespacho === DispatchType.DOMICILIO || sale.tipoDespacho === DispatchType.AGENCIA) && !sale.transportista && !sale.metodoDespacho) {
       alert("Error: Debes asignar un transportista para este tipo de despacho.");
       return;
     }
@@ -376,10 +380,17 @@ export default function Despachos() {
                   </p>
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-[24px] border border-slate-100">
-                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <MapPin size={10} /> Destino {sale.agencia && <span className="text-blue-500">| Agencia: {sale.agencia}</span>}
-                  </p>
+                <div className="bg-slate-50 p-4 rounded-[24px] border border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1">
+                      <MapPin size={10} /> Destino {sale.agencia && <span className="text-blue-500">| Agencia: {sale.agencia}</span>}
+                    </p>
+                    {sale.metodoDespacho && (
+                      <span className="text-[9px] font-black uppercase text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-md">
+                        {sale.metodoDespacho}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs font-bold text-slate-700 uppercase leading-snug">
                     {sale.direccion || 'RETIRO EN TIENDA'}
                   </p>
@@ -489,7 +500,7 @@ export default function Despachos() {
 
                     <button 
                       onClick={() => handleConfirmDispatch(sale)}
-                      disabled={(sale.itemsDespachados || 0) !== sale.cantidad || ((sale.tipoDespacho === DispatchType.DOMICILIO || sale.tipoDespacho === DispatchType.AGENCIA) && !sale.transportista)}
+                      disabled={(sale.itemsDespachados || 0) !== sale.cantidad || ((sale.tipoDespacho === DispatchType.DOMICILIO || sale.tipoDespacho === DispatchType.AGENCIA) && !sale.transportista && !sale.metodoDespacho)}
                       className="w-full py-3 bg-emerald-500 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20"
                     >
                       {sale.tipoDespacho === DispatchType.RETIRO || (sale.juntaCompra && sale.juntaCompra !== 'DESPACHO INMEDIATO') ? 'Confirmar Retiro' : 'Confirmar Salida'}
