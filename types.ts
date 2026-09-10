@@ -1,7 +1,7 @@
 
 export const COMPANY_NAME = "Echeverria & Compañía";
 export const BRAND_NAME = "EL MUNDO TECH";
-export const LOGO_URL = "https://i.ibb.co/zhzn8fXD/Whats-App-Image-2026-07-16-at-16-49-01.jpg";
+export const LOGO_URL = "/mundo_tech_logo.png";
 
 export type LabelFormat = 'logistica' | 'industrial' | 'clasica';
 

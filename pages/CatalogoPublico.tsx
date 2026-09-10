@@ -262,7 +262,7 @@ export default function CatalogoPublico() {
               src={LOGO_URL} 
               alt={BRAND_NAME} 
               referrerPolicy="no-referrer"
-              className="w-11 h-11 object-contain rounded-xl bg-white border border-slate-200 p-1 shadow-sm flex-shrink-0" 
+              className="w-11 h-11 object-contain flex-shrink-0" 
             />
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">

@@ -563,7 +563,7 @@ export default function Catalogo() {
         {/* Printable Header (Visible in print/PDF) */}
         <div className="hidden print:flex items-center justify-between border-b-2 border-slate-900 pb-3 mb-4">
           <div className="flex items-center gap-3">
-            <img src={LOGO_URL} alt="Logo" referrerPolicy="no-referrer" className="w-10 h-10 object-contain rounded-lg" />
+            <img src={LOGO_URL} alt="Logo" referrerPolicy="no-referrer" className="w-10 h-10 object-contain" />
             <div>
               <h1 className="text-lg font-black uppercase tracking-tight">{BRAND_NAME}</h1>
               <p className="text-[10px] font-bold text-slate-500">{COMPANY_NAME} • Lista Oficial de Precios</p>

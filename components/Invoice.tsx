@@ -11,7 +11,7 @@ export const Invoice = React.forwardRef<HTMLDivElement, { sale: Sale, stock: any
             src={LOGO_URL} 
             alt="Logo" 
             referrerPolicy="no-referrer" 
-            className="w-16 h-16 object-contain rounded-xl border border-slate-200 p-1"
+            className="w-16 h-16 object-contain"
           />
           <div>
             <h1 className="text-2xl font-black uppercase text-slate-900 leading-tight">{BRAND_NAME}</h1>

@@ -83,7 +83,7 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
               src={LOGO_URL} 
               alt="Logo" 
               referrerPolicy="no-referrer" 
-              className="w-12 h-12 object-contain border-[1.5px] border-black p-0.5 rounded bg-white" 
+              className="w-12 h-12 object-contain" 
             />
             <div>
               <h2 className="text-sm font-black tracking-tight text-black uppercase leading-tight">
@@ -371,7 +371,7 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
               src={LOGO_URL} 
               alt="Logo" 
               referrerPolicy="no-referrer" 
-              className="w-11 h-11 object-contain border-2 border-black p-0.5 bg-white" 
+              className="w-11 h-11 object-contain" 
             />
             <div>
               <h2 className="text-base font-black tracking-tight text-black uppercase leading-none">
@@ -552,7 +552,7 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
       {/* Cabecera */}
       <div className="flex items-center justify-between border-b-2 border-black pb-2">
         <div className="flex items-center gap-2">
-          <img src={LOGO_URL} alt="Logo" referrerPolicy="no-referrer" className="w-10 h-10 object-contain rounded" />
+          <img src={LOGO_URL} alt="Logo" referrerPolicy="no-referrer" className="w-11 h-11 object-contain" />
           <div>
             <h2 className="text-sm font-black text-black uppercase leading-none">{BRAND_NAME}</h2>
             <p className="text-[8px] font-bold text-slate-600 uppercase">{COMPANY_NAME}</p>
