@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { 
   Printer, 
   ArrowLeft, 
@@ -10,7 +11,8 @@ import {
   LayoutGrid,
   Truck,
   FileText,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Edit3
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../store/GlobalContext';
@@ -21,13 +23,15 @@ import { Label } from '../components/Label';
 export default function Etiquetas() {
   const { sales, stock, currentUser, updateSale, playSound } = useStore();
   const [salesToPrint, setSalesToPrint] = useState<Sale[]>([]);
-  // Use a ref to store sales currently in the queue so the print callback can access them safely
   const printingSalesRef = useRef<Sale[]>([]);
+  const isPrintingRef = useRef(false);
   const [showDemo, setShowDemo] = useState(false);
   const [showPrinted, setShowPrinted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEtiquetadorModal, setShowEtiquetadorModal] = useState(false);
-  const [etiquetadorName, setEtiquetadorName] = useState('');
+  const [etiquetadorName, setEtiquetadorName] = useState(() => {
+    return localStorage.getItem('mdf_last_etiquetador') || currentUser?.nombre || '';
+  });
   const [pendingSaleId, setPendingSaleId] = useState<string | null>(null); // 'all' for print all
   const [labelFormat, setLabelFormat] = useState<LabelFormat>(() => {
     return (localStorage.getItem('preferred_label_format') as LabelFormat) || 'logistica';
@@ -49,7 +53,6 @@ export default function Etiquetas() {
 
     const isSellerReady = s.datosCompletos;
     if (!isSellerReady) {
-      console.log(`Sale ${s.numeroVenta}: datosCompletos=${s.datosCompletos}`);
       return false;
     }
     if (!showPrinted && s.impresa) return false;
@@ -57,7 +60,6 @@ export default function Etiquetas() {
     return s.vendedor === currentUser?.nombre;
   }).sort((a, b) => b.numeroVenta - a.numeroVenta);
 
-  // Fix: Added missing tipoComision property to satisfy the Sale interface
   const demoSale: Sale = {
     id: 'demo', 
     numeroVenta: 1042, 
@@ -84,88 +86,119 @@ export default function Etiquetas() {
     tipoComision: CommissionType.FARDO_NORMAL
   };
 
+  const finalizePrint = () => {
+    const active = printingSalesRef.current;
+    if (active.length > 0) {
+      active.forEach(s => {
+        updateSale(s.id, { impresa: true, etiquetador: s.etiquetador });
+      });
+      printingSalesRef.current = [];
+      playSound('success');
+    }
+    setTimeout(() => {
+      setSalesToPrint([]);
+      isPrintingRef.current = false;
+    }, 500);
+  };
+
   useEffect(() => {
     const handleAfterPrint = () => {
-      if (printingSalesRef.current.length > 0) {
-        printingSalesRef.current.forEach(s => {
-          updateSale(s.id, { impresa: true, etiquetador: s.etiquetador });
-        });
-        printingSalesRef.current = [];
-      }
-      setSalesToPrint([]);
+      finalizePrint();
     };
     window.addEventListener('afterprint', handleAfterPrint);
     return () => window.removeEventListener('afterprint', handleAfterPrint);
   }, [updateSale]);
 
-  useEffect(() => {
-    if (salesToPrint.length > 0) {
-      printingSalesRef.current = salesToPrint;
-      
-      const timer = setTimeout(() => {
-        window.print();
-        
-        // Fallback for environments where afterprint might not trigger or we want immediate sync
-        const activePrintingSales = printingSalesRef.current;
-        if (activePrintingSales.length > 0) {
-          activePrintingSales.forEach(s => {
-            updateSale(s.id, { impresa: true, etiquetador: s.etiquetador });
-          });
-          printingSalesRef.current = [];
-          setSalesToPrint([]);
-        }
-      }, 250);
-      
-      return () => clearTimeout(timer);
+  // Ejecución directa de impresión sin timeouts asíncronos que cancelen el gesto de usuario
+  const executePrint = (salesList: Sale[], currentEtiquetador: string) => {
+    if (salesList.length === 0) return;
+    isPrintingRef.current = true;
+
+    // Persistir el etiquetador
+    if (currentEtiquetador.trim()) {
+      localStorage.setItem('mdf_last_etiquetador', currentEtiquetador.trim());
     }
-  }, [salesToPrint, updateSale]);
+
+    const preparedSales = salesList.map(s => ({
+      ...s,
+      impresa: true,
+      etiquetador: currentEtiquetador.trim() || 'OPERARIO'
+    }));
+
+    printingSalesRef.current = preparedSales;
+
+    // Renderizar síncronamente las etiquetas en el DOM antes de invocar print()
+    flushSync(() => {
+      setSalesToPrint(preparedSales);
+    });
+
+    // Invocación directa inmediata (0 ms) en el hilo del evento del usuario
+    try {
+      window.print();
+    } catch (err) {
+      console.error('Error al invocar window.print():', err);
+    }
+
+    // Respaldo para navegadores donde window.print() es síncrono o afterprint tarda
+    setTimeout(() => {
+      finalizePrint();
+    }, 400);
+  };
 
   const handlePrintAll = () => {
-    if (!etiquetadorName) {
+    if (!etiquetadorName.trim()) {
       setPendingSaleId('all');
       setShowEtiquetadorModal(true);
       return;
     }
-    const updatedSales = readyToPrint.map(s => ({ ...s, impresa: true, etiquetador: etiquetadorName }));
-    setSalesToPrint(updatedSales);
-    setShowEtiquetadorModal(false);
+    executePrint(readyToPrint, etiquetadorName);
   };
 
   const handlePrintSingle = (sale: Sale) => {
-    if (!etiquetadorName) {
+    if (!etiquetadorName.trim()) {
       setPendingSaleId(sale.id);
       setShowEtiquetadorModal(true);
       return;
     }
-    const updated = { ...sale, impresa: true, etiquetador: etiquetadorName };
-    setSalesToPrint([updated]);
-    setShowEtiquetadorModal(false);
+    executePrint([sale], etiquetadorName);
   };
 
   const confirmPrint = (e: React.FormEvent) => {
     e.preventDefault();
     if (!etiquetadorName.trim()) return;
     
+    setShowEtiquetadorModal(false);
+
     if (pendingSaleId === 'all') {
-      const updatedSales = readyToPrint.map(s => ({ ...s, impresa: true, etiquetador: etiquetadorName }));
-      setSalesToPrint(updatedSales);
+      executePrint(readyToPrint, etiquetadorName);
     } else if (pendingSaleId) {
       const sale = sales.find(s => s.id === pendingSaleId);
       if (sale) {
-        const updated = { ...sale, impresa: true, etiquetador: etiquetadorName };
-        setSalesToPrint([updated]);
+        executePrint([sale], etiquetadorName);
       }
     }
-    
-    setShowEtiquetadorModal(false);
+    setPendingSaleId(null);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-center justify-between no-print gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Centro de Etiquetado</h2>
-          <p className="text-slate-500 font-medium italic">Cola de impresión térmica (100x150mm)</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Centro de Etiquetado</h2>
+            {etiquetadorName.trim() && (
+              <button
+                onClick={() => setShowEtiquetadorModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-xs font-bold transition-all border border-slate-200 group"
+                title="Cambiar persona a cargo del etiquetado"
+              >
+                <User size={12} className="text-emerald-500" />
+                <span>Etiquetador: <strong className="text-slate-900">{etiquetadorName}</strong></span>
+                <Edit3 size={11} className="text-slate-400 group-hover:text-slate-600" />
+              </button>
+            )}
+          </div>
+          <p className="text-slate-500 font-medium italic">Cola de impresión térmica directa (100x150mm)</p>
         </div>
         <div className="flex gap-4 w-full sm:w-auto">
           <input 
@@ -348,12 +381,70 @@ export default function Etiquetas() {
       )}
       <style>{`
         @media print {
-          @page { size: 100mm 150mm portrait; margin: 0; }
-          body { margin: 0; padding: 0; background: white !important; }
-          .no-print { display: none !important; }
-          .print-only { display: block !important; }
-          .label-container { width: 100mm; height: 150mm; box-sizing: border-box; page-break-after: always; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-          .label-container:last-child { page-break-after: auto; }
+          @page { 
+            size: 100mm 150mm portrait; 
+            margin: 0; 
+          }
+          *, *::before, *::after {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            background: white !important; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .no-print { 
+            display: none !important; 
+          }
+          .print-only { 
+            display: block !important; 
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100mm !important;
+          }
+          .label-container { 
+            width: 100mm !important; 
+            height: 150mm !important; 
+            box-sizing: border-box !important; 
+            page-break-after: always !important; 
+            break-after: page !important;
+            display: flex !important; 
+            align-items: center !important; 
+            justify-content: center !important; 
+            overflow: hidden !important; 
+          }
+          .label-container:last-child { 
+            page-break-after: auto !important; 
+            break-after: auto !important;
+          }
+
+          /* Garantizar que los bloques oscuros conserven su fondo negro y texto blanco */
+          .bg-black, [class*="bg-black"], [style*="background-color: #000"], [style*="background-color: rgb(0, 0, 0)"] {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            box-shadow: inset 0 0 0 1000px #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .bg-black *, [class*="bg-black"] * {
+            color: #ffffff !important;
+          }
+          /* Excepciones para elementos claros dentro de bloques oscuros */
+          .bg-black .bg-white, [class*="bg-black"] .bg-white,
+          .bg-black [class*="bg-white"], [class*="bg-black"] [class*="bg-white"] {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+          }
+          .bg-black .bg-white *, [class*="bg-black"] .bg-white *,
+          .bg-black [class*="bg-white"] *, [class*="bg-black"] [class*="bg-white"] * {
+            color: #000000 !important;
+          }
         }
       `}</style>
     </div>

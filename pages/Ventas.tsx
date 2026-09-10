@@ -1,5 +1,6 @@
 
 import React, { useState, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { Search, Phone, CheckCircle2, AlertCircle, X, Save, MapPin, CreditCard, UserCheck, Tag, Info, FileEdit, BadgeDollarSign, Truck, Building2, Home, Package, Trash2, Camera, ShoppingBag, Store } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
 import { SaleStatus, SaleType, Sale, DispatchType, StaffRole, DispatchMethod, DISPATCH_OPTIONS } from '../types';
@@ -126,24 +127,22 @@ export default function Ventas() {
   };
 
   const handlePrint = (sale: Sale, type: 'FACTURA' | 'ETIQUETAS') => {
-    setPrintSale(sale);
-    setPrintType(type);
-  };
+    flushSync(() => {
+      setPrintSale(sale);
+      setPrintType(type);
+    });
 
-  React.useEffect(() => {
-    if (printSale && printType) {
-      console.log(`Debug print: ${printType} for ${printSale.numeroVenta}`);
-      const timer = setTimeout(() => {
-        window.print();
-        // Clear print state after printing
-        setTimeout(() => {
-          setPrintSale(null);
-          setPrintType(null);
-        }, 1000);
-      }, 1000);
-      return () => clearTimeout(timer);
+    try {
+      window.print();
+    } catch (err) {
+      console.error('Error al imprimir:', err);
     }
-  }, [printSale, printType]);
+
+    setTimeout(() => {
+      setPrintSale(null);
+      setPrintType(null);
+    }, 500);
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -151,7 +150,6 @@ export default function Ventas() {
         {printSale && printType === 'FACTURA' && (
           <div className="invoice-container">
             <Invoice sale={printSale} stock={stock} />
-            {console.log("Invoice rendered")}
           </div>
         )}
         {printSale && printType === 'ETIQUETAS' && (
@@ -162,6 +160,11 @@ export default function Ventas() {
       </div>
       <style>{`
           @media print {
+            *, *::before, *::after {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
             body { background: white !important; }
             .no-print { display: none !important; }
             .print-only, .print-only * { display: block !important; visibility: visible !important; }
@@ -171,6 +174,8 @@ export default function Ventas() {
             body, html {
               height: auto !important;
               overflow: visible !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             #root, #root > div, main {
               height: auto !important;

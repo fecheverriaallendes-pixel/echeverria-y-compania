@@ -68,7 +68,13 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
   // FORMATO 1: CUADRÍCULA LOGÍSTICA PRO (Máxima legibilidad, recuadros marcados, RUT y Teléfono gigantes)
   if (activeFormat === 'logistica') {
     return (
-      <div className="w-[100mm] h-[150mm] min-h-[150mm] max-h-[150mm] box-border bg-white border-[3px] border-black p-2 flex flex-col justify-between overflow-hidden print:m-0 print:w-[100mm] print:h-[150mm] select-none text-black font-sans leading-tight">
+      <div 
+        className="w-[100mm] h-[150mm] min-h-[150mm] max-h-[150mm] box-border bg-white border-[3px] border-black p-2 flex flex-col justify-between overflow-hidden print:m-0 print:w-[100mm] print:h-[150mm] select-none text-black font-sans leading-tight"
+        style={{
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact'
+        }}
+      >
         
         {/* FILA 1: CABECERA Y FOLIO DE VENTA */}
         <div className="flex flex-row items-center justify-between border-b-[2.5px] border-black pb-2">
@@ -86,7 +92,15 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
               <p className="text-[9px] font-black text-slate-700 uppercase tracking-wide">
                 {COMPANY_NAME}
               </p>
-              <span className="text-[8px] font-black uppercase text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded inline-block mt-0.5">
+              <span 
+                className="text-[8px] font-black uppercase text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded inline-block mt-0.5"
+                style={{
+                  backgroundColor: '#e2e8f0',
+                  color: '#000000',
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact'
+                }}
+              >
                 GUÍA DE TRANSPORTE
               </span>
             </div>
@@ -99,23 +113,55 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
             <span className="font-mono text-3xl font-black tracking-tight text-black leading-none">
               #{sale.numeroVenta}
             </span>
-            <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded mt-1">
+            <span 
+              className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded mt-1 border border-black"
+              style={{
+                backgroundColor: '#000000',
+                color: '#ffffff',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact',
+                boxShadow: 'inset 0 0 0 1000px #000000'
+              }}
+            >
               {sale.tipoVenta || 'NORMAL'}
             </span>
           </div>
         </div>
 
-        {/* FILA 2: BANNER DE TRANSPORTE Y AGENCIA */}
-        <div className="bg-black text-white px-2.5 py-1.5 flex items-center justify-between border-b-[2.5px] border-black">
+        {/* FILA 2: BANNER DE TRANSPORTE Y AGENCIA (ALTO CONTRASTE FORZADO) */}
+        <div 
+          className="bg-black text-white px-2.5 py-1.5 flex items-center justify-between border-y-[2.5px] border-black"
+          style={{
+            backgroundColor: '#000000',
+            color: '#ffffff',
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
+            boxShadow: 'inset 0 0 0 1000px #000000'
+          }}
+        >
           <div className="flex-1 pr-2">
-            <span className="text-[8px] font-bold uppercase tracking-widest text-slate-300 block leading-none">
+            <span 
+              className="text-[8.5px] font-bold uppercase tracking-widest block leading-none"
+              style={{ color: '#cbd5e1', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+            >
               EMPRESA / MÉTODO DE ENVÍO
             </span>
-            <span className="text-sm sm:text-base font-black uppercase tracking-wide leading-tight line-clamp-1">
+            <span 
+              className="text-sm sm:text-base font-black uppercase tracking-wide leading-tight line-clamp-1"
+              style={{ color: '#ffffff', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+            >
               {dispatchMethod}
             </span>
           </div>
-          <div className="bg-white text-black px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border border-white">
+          <div 
+            className="bg-white text-black px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border-2 border-black"
+            style={{
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact'
+            }}
+          >
             {dispatchType}
           </div>
         </div>
@@ -123,7 +169,15 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
         {/* FILA 3: RECUADRO DESTINATARIO */}
         <div className="border-b-[2.5px] border-black p-1.5 bg-white">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black uppercase tracking-wider text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded-sm">
+            <span 
+              className="text-[9px] font-black uppercase tracking-wider text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded-sm"
+              style={{
+                backgroundColor: '#e2e8f0',
+                color: '#000000',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact'
+              }}
+            >
               1. DESTINATARIO (RECEPTOR)
             </span>
             <span className="text-[8px] font-black uppercase text-slate-500">
@@ -176,7 +230,15 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
 
         {/* FILA 5: DIRECCIÓN DE ENTREGA Y COMUNA */}
         <div className="border-b-[2.5px] border-black p-2 bg-white flex-1 min-h-[22mm] flex flex-col justify-start">
-          <span className="text-[9px] font-black uppercase tracking-wider text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded-sm inline-block self-start">
+          <span 
+            className="text-[9px] font-black uppercase tracking-wider text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded-sm inline-block self-start"
+            style={{
+              backgroundColor: '#e2e8f0',
+              color: '#000000',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact'
+            }}
+          >
             2. DIRECCIÓN DE ENTREGA / DESTINO FINAL
           </span>
           <div className="mt-1">
@@ -185,7 +247,18 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
             </p>
             {sale.observaciones && (
               <div className="mt-1.5 p-1 bg-slate-100 border border-black text-[9.5px] font-bold uppercase text-black leading-tight">
-                <span className="font-black bg-black text-white px-1 py-0.2 rounded-sm mr-1">INDICACIÓN:</span>
+                <span 
+                  className="font-black bg-black text-white px-1.5 py-0.5 rounded-sm mr-1 border border-black"
+                  style={{
+                    backgroundColor: '#000000',
+                    color: '#ffffff',
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact',
+                    boxShadow: 'inset 0 0 0 1000px #000000'
+                  }}
+                >
+                  INDICACIÓN:
+                </span>
                 {sale.observaciones}
               </div>
             )}
@@ -224,7 +297,16 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
               {quantity > 1 ? 'BULTOS' : 'BULTO'}
             </span>
             {stockItem?.peso && (
-              <span className="text-[8px] font-black text-white bg-black px-1.5 py-0.2 rounded mt-0.5">
+              <span 
+                className="text-[8px] font-black text-white bg-black px-1.5 py-0.5 rounded mt-0.5 border border-black"
+                style={{
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                  boxShadow: 'inset 0 0 0 1000px #000000'
+                }}
+              >
                 {stockItem.peso} KG
               </span>
             )}
@@ -233,7 +315,16 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
 
         {/* FILA 7: ALERTA DE SEGURIDAD - VIDEO OBLIGATORIO */}
         <div className="border-b-[2.5px] border-black p-1.5 bg-slate-100 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-full bg-black text-white font-black text-xs flex items-center justify-center flex-shrink-0">
+          <div 
+            className="w-6 h-6 rounded-full bg-black text-white font-black text-xs flex items-center justify-center flex-shrink-0 border border-black"
+            style={{
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              boxShadow: 'inset 0 0 0 1000px #000000'
+            }}
+          >
             📹
           </div>
           <div className="leading-none">
@@ -265,7 +356,13 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
   // FORMATO 2: INDUSTRIAL TRANSPORTE PESADO (Bordes extra gruesos, contrastes extremos, tipografía gigante)
   if (activeFormat === 'industrial') {
     return (
-      <div className="w-[100mm] h-[150mm] min-h-[150mm] max-h-[150mm] box-border bg-white border-[4px] border-black p-2 flex flex-col justify-between overflow-hidden print:m-0 print:w-[100mm] print:h-[150mm] select-none text-black font-sans leading-tight">
+      <div 
+        className="w-[100mm] h-[150mm] min-h-[150mm] max-h-[150mm] box-border bg-white border-[4px] border-black p-2 flex flex-col justify-between overflow-hidden print:m-0 print:w-[100mm] print:h-[150mm] select-none text-black font-sans leading-tight"
+        style={{
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact'
+        }}
+      >
         
         {/* Cabecera Industrial */}
         <div className="flex items-center justify-between border-b-[3px] border-black pb-2">
@@ -285,7 +382,16 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
               </p>
             </div>
           </div>
-          <div className="bg-black text-white px-3 py-1 text-center rounded">
+          <div 
+            className="bg-black text-white px-3 py-1 text-center rounded border border-black"
+            style={{
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              boxShadow: 'inset 0 0 0 1000px #000000'
+            }}
+          >
             <span className="text-[8px] font-bold uppercase tracking-widest block text-slate-300">ORDEN</span>
             <span className="font-mono text-2xl font-black leading-none">#{sale.numeroVenta}</span>
           </div>
@@ -295,12 +401,32 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
         <div className="border-b-[3px] border-black py-1.5 px-2 bg-slate-100 flex items-center justify-between">
           <span className="text-[9px] font-black uppercase text-black">TRANSPORTE:</span>
           <span className="text-base font-black uppercase tracking-wider text-black">{dispatchMethod}</span>
-          <span className="bg-black text-white px-1.5 py-0.5 text-[9px] font-black uppercase">{dispatchType}</span>
+          <span 
+            className="bg-black text-white px-1.5 py-0.5 text-[9px] font-black uppercase rounded border border-black"
+            style={{
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              boxShadow: 'inset 0 0 0 1000px #000000'
+            }}
+          >
+            {dispatchType}
+          </span>
         </div>
 
         {/* Destinatario Principal */}
         <div className="border-b-[3px] border-black p-2 bg-white">
-          <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 inline-block">
+          <span 
+            className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 inline-block rounded-sm border border-black"
+            style={{
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              boxShadow: 'inset 0 0 0 1000px #000000'
+            }}
+          >
             DESTINATARIO
           </span>
           <p className="text-2xl font-black uppercase tracking-tight text-black mt-1 leading-tight">
@@ -311,7 +437,16 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
         {/* Recuadro Crítico: RUT y Teléfono */}
         <div className="grid grid-cols-2 border-b-[3px] border-black">
           <div className="border-r-[3px] border-black p-2 bg-slate-50 text-center">
-            <span className="text-[9px] font-black uppercase tracking-wider block bg-black text-white py-0.5">
+            <span 
+              className="text-[9px] font-black uppercase tracking-wider block bg-black text-white py-0.5 rounded-sm border border-black"
+              style={{
+                backgroundColor: '#000000',
+                color: '#ffffff',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact',
+                boxShadow: 'inset 0 0 0 1000px #000000'
+              }}
+            >
               R.U.T. DESTINATARIO
             </span>
             <p className="text-2xl font-mono font-black text-black tracking-wider mt-1.5">
@@ -319,7 +454,16 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
             </p>
           </div>
           <div className="p-2 bg-slate-50 text-center">
-            <span className="text-[9px] font-black uppercase tracking-wider block bg-black text-white py-0.5">
+            <span 
+              className="text-[9px] font-black uppercase tracking-wider block bg-black text-white py-0.5 rounded-sm border border-black"
+              style={{
+                backgroundColor: '#000000',
+                color: '#ffffff',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact',
+                boxShadow: 'inset 0 0 0 1000px #000000'
+              }}
+            >
               TELÉFONO CONTACTO
             </span>
             <p className="text-2xl font-mono font-black text-black tracking-tight mt-1.5">
@@ -330,7 +474,16 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
 
         {/* Dirección de Entrega */}
         <div className="border-b-[3px] border-black p-2 flex-1 min-h-[26mm] bg-white">
-          <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 inline-block">
+          <span 
+            className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 inline-block rounded-sm border border-black"
+            style={{
+              backgroundColor: '#000000',
+              color: '#ffffff',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+              boxShadow: 'inset 0 0 0 1000px #000000'
+            }}
+          >
             DIRECCIÓN DE DESPACHO
           </span>
           <p className="text-lg font-black uppercase text-black leading-snug mt-1.5 break-words">
@@ -358,8 +511,17 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
         </div>
 
         {/* Video Advertencia */}
-        <div className="border-b-[3px] border-black p-1 bg-black text-white text-center">
-          <p className="text-[9px] font-black uppercase tracking-wider">
+        <div 
+          className="border-b-[3px] border-black p-1 bg-black text-white text-center"
+          style={{
+            backgroundColor: '#000000',
+            color: '#ffffff',
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
+            boxShadow: 'inset 0 0 0 1000px #000000'
+          }}
+        >
+          <p className="text-[9px] font-black uppercase tracking-wider text-white">
             ⚠️ OBLIGATORIO: GRABAR VIDEO AL ABRIR EL PAQUETE PARA GARANTÍA
           </p>
         </div>
@@ -379,7 +541,13 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
 
   // FORMATO 3: CLÁSICA MEJORADA (Estructura compacta con datos agrandados y recuadros limpios)
   return (
-    <div className="w-[100mm] h-[150mm] min-h-[150mm] max-h-[150mm] box-border bg-white border-2 border-black p-3 flex flex-col justify-between overflow-hidden print:m-0 print:w-[100mm] print:h-[150mm] select-none text-black font-sans leading-tight">
+    <div 
+      className="w-[100mm] h-[150mm] min-h-[150mm] max-h-[150mm] box-border bg-white border-2 border-black p-3 flex flex-col justify-between overflow-hidden print:m-0 print:w-[100mm] print:h-[150mm] select-none text-black font-sans leading-tight"
+      style={{
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact'
+      }}
+    >
       
       {/* Cabecera */}
       <div className="flex items-center justify-between border-b-2 border-black pb-2">
