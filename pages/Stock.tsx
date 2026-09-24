@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp, Camera, Upload, DollarSign } from 'lucide-react';
+import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp, Camera, Upload, DollarSign, Sparkles, Cpu, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StaffRole, StockItem } from '../types';
+import { StaffRole, StockItem, DepartamentoGiro, DEPARTAMENTOS, getItemDepartamento } from '../types';
 
 function parseLocalDate(dateStr: string): Date {
   if (!dateStr) return new Date();
@@ -24,11 +24,14 @@ function parseLocalDate(dateStr: string): Date {
 }
 
 export default function Stock() {
-  const { stock, addStockItem, updateStockItem, togglePromocion, removeStockItem, bulkAddStock, currentUser, playSound, stockHistory, sales } = useStore();
+  const { stock, addStockItem, updateStockItem, togglePromocion, removeStockItem, bulkAddStock, setProductDepartment, seedSampleBeautyProducts, currentUser, playSound, stockHistory, sales } = useStore();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState('TODOS');
   const [categoryFilter, setCategoryFilter] = useState<'TODOS' | 'UNIDAD' | 'CAJA' | 'NEGATIVO'>('TODOS');
+  const [departmentFilter, setDepartmentFilter] = useState<'TODOS' | DepartamentoGiro>('TODOS');
+  const [subcategoriaFilter, setSubcategoriaFilter] = useState<string>('TODAS');
+  const [isSeedingBeauty, setIsSeedingBeauty] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -46,6 +49,10 @@ export default function Stock() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const action = params.get('action');
+    const depto = params.get('depto');
+    if (depto === 'BELLEZA' || depto === 'TECNOLOGIA') {
+      setDepartmentFilter(depto as DepartamentoGiro);
+    }
     if (action === 'add') {
       setIsAdding(true);
     }
@@ -62,6 +69,8 @@ export default function Stock() {
     stockActual: 1,
     unidad: 'UNIDAD' as any,
     categoria: 'ESTANDAR' as any,
+    departamento: 'TECNOLOGIA' as DepartamentoGiro,
+    subcategoria: '',
     peso: 0,
     imagenUrl: '',
     especificaciones: '',
@@ -246,13 +255,35 @@ export default function Stock() {
   const normalizeText = (text: string) => 
     text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+  const techCount = useMemo(() => {
+    return stock.filter(item => (item.departamento || getItemDepartamento(item)) === 'TECNOLOGIA').length;
+  }, [stock]);
+
+  const beautyCount = useMemo(() => {
+    return stock.filter(item => (item.departamento || getItemDepartamento(item)) === 'BELLEZA').length;
+  }, [stock]);
+
+  const availableSubcategories = useMemo(() => {
+    if (departmentFilter === 'TODOS') {
+      const allSubs = new Set<string>();
+      stock.forEach(i => { if (i.subcategoria) allSubs.add(i.subcategoria); });
+      return Array.from(allSubs);
+    }
+    const deptDef = DEPARTAMENTOS.find(d => d.id === departmentFilter);
+    return deptDef ? deptDef.subcategorias : [];
+  }, [departmentFilter, stock]);
+
   const inventoryStats = useMemo(() => {
     let totalUnidades = 0;
     let valorCosto = 0;
     let valorVenta = 0;
     let articulosCriticos = 0;
 
-    stock.forEach(item => {
+    const targetStock = departmentFilter === 'TODOS' 
+      ? stock 
+      : stock.filter(item => (item.departamento || getItemDepartamento(item)) === departmentFilter);
+
+    targetStock.forEach(item => {
       const cant = Math.max(0, Number(item.stockActual) || 0);
       const costo = Number(item.precioCosto) || 0;
       const venta = Number(item.precioSugerido) || 0;
@@ -274,15 +305,29 @@ export default function Stock() {
       margenEstimado,
       porcentajeMargen,
       articulosCriticos,
-      totalReferencias: stock.length
+      totalReferencias: targetStock.length
     };
-  }, [stock]);
+  }, [stock, departmentFilter]);
 
   const filteredStock = useMemo(() => {
     const normalizedSearch = normalizeText(searchTerm);
     return stock.filter(item => {
+      const itemDepto = item.departamento || getItemDepartamento(item);
+      
+      // Department filter
+      if (departmentFilter !== 'TODOS' && itemDepto !== departmentFilter) {
+        return false;
+      }
+
+      // Subcategory filter
+      if (subcategoriaFilter !== 'TODAS' && item.subcategoria !== subcategoriaFilter) {
+        return false;
+      }
+
       const matchesSearch = normalizeText(item.codigo || '').includes(normalizedSearch) || 
-                           normalizeText(item.tipo || '').includes(normalizedSearch);
+                           normalizeText(item.tipo || '').includes(normalizedSearch) ||
+                           normalizeText(item.especificaciones || '').includes(normalizedSearch) ||
+                           normalizeText(item.subcategoria || '').includes(normalizedSearch);
       const matchesProvider = providerFilter === 'TODOS' || (item.proveedor || '').toUpperCase() === providerFilter;
       
       let matchesCategory = true;
@@ -296,15 +341,15 @@ export default function Stock() {
 
       return matchesSearch && matchesProvider && matchesCategory;
     });
-  }, [stock, searchTerm, providerFilter, categoryFilter]);
+  }, [stock, searchTerm, providerFilter, categoryFilter, departmentFilter, subcategoriaFilter]);
 
   const downloadFormat = () => {
-    const csvContent = "codigo,tipo,proveedor,precioCosto,precioSugerido,precioMayorista,minUnidadesMayorista,stockActual,unidad\nTEC-101,Smartwatch Ultra Z,Tech Global,15000,29990,24990,5,20,UNIDAD\nAUD-202,Audífonos Cancelación Ruido,Shenzhen Corp,12000,24990,19990,5,30,PIEZA";
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = "codigo,tipo,departamento,subcategoria,proveedor,precioCosto,precioSugerido,precioMayorista,minUnidadesMayorista,stockActual,unidad\nTEC-101,Smartwatch Ultra Z,TECNOLOGIA,Smartwatch & Wearables,Tech Global,15000,29990,24990,5,20,UNIDAD\nBEL-001,Set Brochas Profesionales 12 Pzs,BELLEZA,Implementos & Herramientas,Glam Pro,7500,16990,12990,3,25,SET";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'formato_carga_elmundo_tech.csv';
+    a.download = 'formato_carga_elmundo_tech_y_belleza.csv';
     a.click();
     playSound('success');
   };
@@ -322,25 +367,64 @@ export default function Stock() {
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-        const [codigo, tipo, proveedor, costo, precio, pMayorista, minMayorista, stockCant, unidad] = line.split(',');
-        if (codigo && tipo && !isNaN(Number(precio))) {
-          items.push({
-            codigo: codigo.trim().toUpperCase(),
-            tipo: tipo.trim(),
-            proveedor: proveedor?.trim().toUpperCase() || 'GENERAL',
-            precioCosto: Number(costo) || 0,
-            precioSugerido: Number(precio),
-            precioMayorista: Number(pMayorista) || undefined,
-            minUnidadesMayorista: Number(minMayorista) || 5,
-            stockActual: Number(stockCant) || 1,
-            unidad: (unidad?.trim().toUpperCase() === 'PIEZA' ? 'PIEZA' : 'UNIDAD')
-          });
+        const parts = line.split(',');
+        if (parts.length >= 11) {
+          const [codigo, tipo, depto, subcat, proveedor, costo, precio, pMayorista, minMayorista, stockCant, unidad] = parts;
+          if (codigo && tipo && !isNaN(Number(precio))) {
+            const rawDepto = (depto || '').trim().toUpperCase();
+            const validDepto: DepartamentoGiro = rawDepto === 'BELLEZA' ? 'BELLEZA' : 'TECNOLOGIA';
+            items.push({
+              codigo: codigo.trim().toUpperCase(),
+              tipo: tipo.trim(),
+              departamento: validDepto,
+              subcategoria: subcat?.trim() || '',
+              proveedor: proveedor?.trim().toUpperCase() || 'GENERAL',
+              precioCosto: Number(costo) || 0,
+              precioSugerido: Number(precio),
+              precioMayorista: Number(pMayorista) || undefined,
+              minUnidadesMayorista: Number(minMayorista) || 5,
+              stockActual: Number(stockCant) || 1,
+              unidad: (unidad?.trim().toUpperCase() === 'SET' ? 'SET' : unidad?.trim().toUpperCase() === 'PACK' ? 'PACK' : unidad?.trim().toUpperCase() === 'PIEZA' ? 'PIEZA' : 'UNIDAD')
+            });
+          }
+        } else {
+          const [codigo, tipo, proveedor, costo, precio, pMayorista, minMayorista, stockCant, unidad] = parts;
+          if (codigo && tipo && !isNaN(Number(precio))) {
+            items.push({
+              codigo: codigo.trim().toUpperCase(),
+              tipo: tipo.trim(),
+              proveedor: proveedor?.trim().toUpperCase() || 'GENERAL',
+              precioCosto: Number(costo) || 0,
+              precioSugerido: Number(precio),
+              precioMayorista: Number(pMayorista) || undefined,
+              minUnidadesMayorista: Number(minMayorista) || 5,
+              stockActual: Number(stockCant) || 1,
+              unidad: (unidad?.trim().toUpperCase() === 'PIEZA' ? 'PIEZA' : 'UNIDAD')
+            });
+          }
         }
       }
       if (items.length > 0) bulkAddStock(items);
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleSeedBeautySamples = async () => {
+    if (!canModify) return;
+    try {
+      setIsSeedingBeauty(true);
+      playSound('click');
+      const count = await seedSampleBeautyProducts();
+      setIsSeedingBeauty(false);
+      playSound('success');
+      showFeedback(`✅ Se agregaron ${count} productos de prueba para Belleza y Skincare.`, 'success');
+      setDepartmentFilter('BELLEZA');
+    } catch (e) {
+      setIsSeedingBeauty(false);
+      playSound('error');
+      showFeedback('Hubo un problema al cargar los artículos de belleza.', 'error');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -354,13 +438,16 @@ export default function Stock() {
     try {
       let finalCodigo = newBale.codigo;
       if (!finalCodigo) {
-          const existingCodes = stock.map(s => s.codigo || '').filter(c => c.startsWith('TEC-') || c.startsWith('MDF-'));
+          const prefix = newBale.departamento === 'BELLEZA' ? 'BEL-' : 'TEC-';
+          const existingCodes = stock.map(s => s.codigo || '').filter(c => c.startsWith(prefix));
           let nextNum = 1;
           if(existingCodes.length > 0) {
-              const numbers = existingCodes.map(c => parseInt(c.split('-')[1]) || 0);
-              nextNum = Math.max(...numbers) + 1;
+              const numbers = existingCodes.map(c => parseInt(c.split('-')[1]) || 0).filter(n => !isNaN(n));
+              if (numbers.length > 0) {
+                nextNum = Math.max(...numbers) + 1;
+              }
           }
-          finalCodigo = `TEC-${String(nextNum).padStart(3, '0')}`;
+          finalCodigo = `${prefix}${String(nextNum).padStart(3, '0')}`;
       }
 
       const codeExists = stock.some(s => (s.codigo || '').toUpperCase() === finalCodigo.toUpperCase());
@@ -371,7 +458,24 @@ export default function Stock() {
       }
 
       await addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
-      setNewBale({ codigo: '', tipo: '', proveedor: '', precioCosto: 0, precioSugerido: 0, precioMayorista: 0, minUnidadesMayorista: 5, stockActual: 1, unidad: 'UNIDAD' as any, categoria: 'ESTANDAR' as any, peso: 0, imagenUrl: '', especificaciones: '', comision: undefined });
+      setNewBale({ 
+        codigo: '', 
+        tipo: '', 
+        proveedor: '', 
+        precioCosto: 0, 
+        precioSugerido: 0, 
+        precioMayorista: 0, 
+        minUnidadesMayorista: 5, 
+        stockActual: 1, 
+        unidad: 'UNIDAD' as any, 
+        categoria: 'ESTANDAR' as any, 
+        departamento: departmentFilter !== 'TODOS' ? departmentFilter : 'TECNOLOGIA',
+        subcategoria: '',
+        peso: 0, 
+        imagenUrl: '', 
+        especificaciones: '', 
+        comision: undefined 
+      });
       setIsAdding(false);
       playSound('success');
       showFeedback('Producto ingresado correctamente al inventario.', 'success');
@@ -446,16 +550,24 @@ export default function Stock() {
 
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-8">
         <div>
-          <h2 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Inventario Central</h2>
-          <p className="text-slate-500 font-medium italic mt-2">Control maestro de Productos y Piezas Unitarias</p>
+          <div className="flex items-center gap-3">
+            <h2 className="text-5xl font-black text-slate-900 tracking-tight uppercase">Inventario Central</h2>
+            <span className="px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+              {stock.length} Artículos
+            </span>
+          </div>
+          <p className="text-slate-500 font-medium italic mt-2">
+            Gestión multigiros de inventario: Tecnología, Belleza, Maquillaje y Cuidado Corporal
+          </p>
         </div>
         {canModify && (
           <div className="flex flex-wrap gap-4">
             <button 
               onClick={downloadFormat}
               className="flex items-center gap-2 px-8 py-4 bg-white border-2 border-slate-100 text-slate-900 rounded-[24px] font-black text-xs uppercase hover:bg-slate-50 transition-all shadow-sm"
+              title="Descargar plantilla CSV con columnas para Tecnología y Belleza"
             >
-              <Download size={18} /> CSV Pro
+              <Download size={18} /> CSV Pro (Multigiro)
             </button>
             <button 
               onClick={() => fileInputRef.current?.click()}
@@ -465,7 +577,27 @@ export default function Stock() {
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".csv" />
             <button 
-              onClick={() => setIsAdding(true)}
+              onClick={() => {
+                setNewBale({
+                  codigo: '',
+                  tipo: '',
+                  proveedor: '',
+                  precioCosto: 0,
+                  precioSugerido: 0,
+                  precioMayorista: 0,
+                  minUnidadesMayorista: 5,
+                  stockActual: 1,
+                  unidad: 'UNIDAD',
+                  categoria: 'ESTANDAR',
+                  departamento: departmentFilter !== 'TODOS' ? departmentFilter : 'TECNOLOGIA',
+                  subcategoria: '',
+                  peso: 0,
+                  imagenUrl: '',
+                  especificaciones: '',
+                  comision: undefined
+                });
+                setIsAdding(true);
+              }}
               className="flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-[24px] font-black text-sm uppercase shadow-2xl hover:bg-black transition-all active:scale-95"
             >
               <PackagePlus size={24} /> Registrar Entrada
@@ -474,11 +606,144 @@ export default function Stock() {
         )}
       </div>
 
+      {/* Selectores de Giro / Departamento */}
+      <div className="bg-white p-3 rounded-[32px] border border-slate-100 shadow-sm space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => { setDepartmentFilter('TODOS'); setSubcategoriaFilter('TODAS'); playSound('click'); }}
+              className={`flex items-center gap-2.5 px-6 py-3.5 rounded-[22px] font-black text-xs uppercase tracking-wider transition-all ${
+                departmentFilter === 'TODOS'
+                  ? 'bg-slate-900 text-white shadow-md'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Layers size={16} />
+              <span>Todo el Inventario</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${departmentFilter === 'TODOS' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
+                {stock.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setDepartmentFilter('TECNOLOGIA'); setSubcategoriaFilter('TODAS'); playSound('click'); }}
+              className={`flex items-center gap-2.5 px-6 py-3.5 rounded-[22px] font-black text-xs uppercase tracking-wider transition-all ${
+                departmentFilter === 'TECNOLOGIA'
+                  ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
+                  : 'bg-sky-50/70 text-sky-800 hover:bg-sky-100'
+              }`}
+            >
+              <Cpu size={16} className={departmentFilter === 'TECNOLOGIA' ? 'text-white' : 'text-sky-600'} />
+              <span>Tecnología</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${departmentFilter === 'TECNOLOGIA' ? 'bg-white/20 text-white' : 'bg-sky-200/80 text-sky-900'}`}>
+                {techCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { setDepartmentFilter('BELLEZA'); setSubcategoriaFilter('TODAS'); playSound('click'); }}
+              className={`flex items-center gap-2.5 px-6 py-3.5 rounded-[22px] font-black text-xs uppercase tracking-wider transition-all ${
+                departmentFilter === 'BELLEZA'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-600/30'
+                  : 'bg-pink-50/80 text-pink-800 hover:bg-pink-100'
+              }`}
+            >
+              <Sparkles size={16} className={departmentFilter === 'BELLEZA' ? 'text-white' : 'text-pink-600'} />
+              <span>Belleza & Cuidados</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${departmentFilter === 'BELLEZA' ? 'bg-white/20 text-white' : 'bg-pink-200/80 text-pink-900'}`}>
+                {beautyCount}
+              </span>
+            </button>
+          </div>
+
+          {canModify && beautyCount === 0 && (
+            <button
+              type="button"
+              onClick={handleSeedBeautySamples}
+              disabled={isSeedingBeauty}
+              className="flex items-center gap-2 px-5 py-3 bg-pink-100 text-pink-800 hover:bg-pink-200 rounded-2xl font-black text-xs uppercase tracking-wider transition-all border border-pink-200"
+            >
+              <Sparkles size={16} className="text-pink-600 animate-spin" />
+              {isSeedingBeauty ? 'Cargando Catálogo Belleza...' : '✨ Cargar Artículos de Muestra para Belleza'}
+            </button>
+          )}
+        </div>
+
+        {/* Subcategorías pills si hay departamento seleccionado */}
+        {departmentFilter !== 'TODOS' && availableSubcategories.length > 0 && (
+          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-2">
+              Subcategorías:
+            </span>
+            <button
+              type="button"
+              onClick={() => setSubcategoriaFilter('TODAS')}
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${
+                subcategoriaFilter === 'TODAS'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Todas
+            </button>
+            {availableSubcategories.map(sub => (
+              <button
+                key={sub}
+                type="button"
+                onClick={() => setSubcategoriaFilter(sub)}
+                className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all ${
+                  subcategoriaFilter === sub
+                    ? departmentFilter === 'BELLEZA' ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-600 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tarjeta de bienvenida al nuevo giro si no hay productos de belleza */}
+      {beautyCount === 0 && (
+        <div className="bg-gradient-to-r from-pink-50 via-rose-50 to-amber-50 rounded-3xl p-6 border-2 border-pink-200/70 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center text-pink-600 flex-shrink-0">
+              <Sparkles size={28} />
+            </div>
+            <div>
+              <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                ¡Nuevo Giro de Belleza, Maquillaje y Cuidado de Piel y Cuerpo!
+              </h4>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl font-medium">
+                Tu sistema ya cuenta con separación total de inventario y catálogo para Tecnología y Belleza. Puedes registrar tus productos de belleza ahora mismo o cargar 8 artículos de muestra con precios sugeridos y fotos.
+              </p>
+            </div>
+          </div>
+          {canModify && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleSeedBeautySamples}
+                disabled={isSeedingBeauty}
+                className="px-6 py-3.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-pink-600/20 hover:from-pink-700 hover:to-rose-700 transition-all flex items-center gap-2"
+              >
+                <Sparkles size={16} /> {isSeedingBeauty ? 'Cargando...' : 'Cargar Muestras Belleza'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Resumen & Auditoría de Valor Bodega */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Bodega (Venta)</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Valor Bodega ({departmentFilter === 'TODOS' ? 'Total Venta' : departmentFilter})
+            </span>
             <span className="p-2.5 rounded-2xl bg-emerald-100 text-emerald-700"><DollarSign size={18} /></span>
           </div>
           <div className="mt-3">
@@ -493,7 +758,9 @@ export default function Stock() {
 
         <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Costo Total Inventario</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Costo {departmentFilter === 'TODOS' ? 'Inventario' : departmentFilter}
+            </span>
             <span className="p-2.5 rounded-2xl bg-blue-100 text-blue-700"><Layers size={18} /></span>
           </div>
           <div className="mt-3">
@@ -589,7 +856,7 @@ export default function Stock() {
             <Search className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={24} />
             <input 
               type="text" 
-              placeholder="Buscar por código o producto..."
+              placeholder="Buscar por código, producto o subcategoría..."
               className="w-full pl-20 pr-10 py-6 rounded-[32px] border-2 border-slate-100 focus:border-blue-400 outline-none transition-all shadow-sm text-xl font-bold"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -616,114 +883,175 @@ export default function Stock() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cat.</th>
-                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidad</th>
-                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</th>
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Giro</th>
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cat.</th>
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Unidad</th>
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Código</th>
                 <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">Descripción Producto</th>
-                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Precio Venta</th>
-                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Cant.</th>
-                <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Promoción</th>
-                {canModify && <th className="px-8 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Gestión</th>}
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Precio Venta</th>
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Cant.</th>
+                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Promoción</th>
+                {canModify && <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Gestión</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredStock.map((item) => (
-                <tr key={`${item.id}-${item.codigo}`} className={`group hover:bg-slate-50 transition-colors ${item.stockActual < 3 && item.stockActual > 0 ? 'bg-red-50/30' : ''}`}>
-                  <td className="px-8 py-6">
-                    <span className={`p-2 rounded-xl flex items-center justify-center w-10 h-10 ${(item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`} title={item.categoria === 'MAYORISTA' ? 'Mayorista' : 'Estándar'}>
-                      {(item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') ? <Boxes size={18} /> : <Layers size={18} />}
-                    </span>
-                  </td>
-                  <td className="px-8 py-6">
-                    <div className="flex flex-col">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700">
-                        {item.unidad || 'UNIDAD'}
+              {filteredStock.map((item) => {
+                const depto = item.departamento || getItemDepartamento(item);
+                const isBelleza = depto === 'BELLEZA';
+
+                return (
+                  <tr key={`${item.id}-${item.codigo}`} className={`group hover:bg-slate-50 transition-colors ${item.stockActual < 3 && item.stockActual > 0 ? 'bg-red-50/30' : ''}`}>
+                    <td className="px-6 py-6">
+                      <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
+                        isBelleza 
+                          ? 'bg-pink-100 text-pink-700 border border-pink-200' 
+                          : 'bg-sky-100 text-sky-700 border border-sky-200'
+                      }`}>
+                        {isBelleza ? <Sparkles size={12} /> : <Cpu size={12} />}
+                        {isBelleza ? 'Belleza' : 'Tec'}
                       </span>
-                      {item.peso && (item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') && (
-                        <span className="text-[10px] font-black text-amber-600 mt-1 ml-1">{item.peso} KG</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 font-mono font-black text-slate-400 uppercase text-xs tracking-widest">{item.codigo}</td>
-                  <td className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      {item.imagenUrl ? (
-                        <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform flex-shrink-0">
-                          <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0 ${item.stockActual < 3 ? 'bg-red-100 text-red-500' : 'bg-blue-50 text-blue-500'}`}>
-                          <Package size={22} />
-                        </div>
-                      )}
+                    </td>
+                    <td className="px-6 py-6">
+                      <span className={`p-2 rounded-xl flex items-center justify-center w-10 h-10 ${(item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-600'}`} title={item.categoria === 'MAYORISTA' ? 'Mayorista' : 'Estándar'}>
+                        {(item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') ? <Boxes size={18} /> : <Layers size={18} />}
+                      </span>
+                    </td>
+                    <td className="px-6 py-6">
                       <div className="flex flex-col">
-                        <span className="font-black text-slate-900 uppercase text-sm tracking-tighter leading-none">{item.tipo}</span>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">{item.proveedor}</span>
-                          {item.especificaciones && (
-                            <>
-                              <span className="text-slate-300 text-[10px]">•</span>
-                              <span className="text-[10px] text-slate-500 italic max-w-sm truncate" title={item.especificaciones}>{item.especificaciones}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-right">
-                    <div className="flex flex-col items-end">
-                      <span className="font-black text-slate-900 text-xl tracking-tighter">
-                        ${Number(item.precioSugerido || 0).toLocaleString('es-CL')}
-                      </span>
-                      {canModify && Number(item.precioCosto || 0) > 0 && (
-                        <span className="text-[11px] font-bold text-slate-400 mt-0.5">
-                          Costo: ${Number(item.precioCosto || 0).toLocaleString('es-CL')}
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700">
+                          {item.unidad || 'UNIDAD'}
                         </span>
-                      )}
-                      {!!item.precioMayorista && item.precioMayorista > 0 && (
-                        <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
-                          May ({item.minUnidadesMayorista || 5}+ uds): ${Number(item.precioMayorista).toLocaleString('es-CL')}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-center">
-                    <div className={`inline-flex flex-col items-center justify-center w-14 h-14 rounded-2xl ${item.stockActual > 3 ? 'bg-emerald-50 text-emerald-600' : item.stockActual > 0 ? 'bg-amber-50 text-amber-600 animate-pulse border border-amber-200' : 'bg-red-50 text-red-600'}`}>
-                      <span className="text-xl font-black leading-none">{item.stockActual}</span>
-                      <span className="text-[8px] font-black uppercase mt-1">
-                        {item.unidad === 'CAJA' ? 'Cajas' : item.unidad === 'PACK' ? 'Packs' : item.unidad === 'SET' ? 'Sets' : 'Uds'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-6 text-center">
-                    <button 
-                      onClick={() => canModify && togglePromocion(item.id)} 
-                      disabled={!canModify}
-                      className={`p-3 rounded-xl transition-all ${item.promocion ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'} ${!canModify ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
-                      title={!canModify ? "No tienes permisos para modificar promociones" : "Alternar Promoción"}
-                    >
-                        <Tag size={20} />
-                    </button>
-                  </td>
-                  {canModify && (
-                    <td className="px-8 py-6 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {currentUser?.rol === StaffRole.ADMIN && (
-                          <button 
-                            onClick={() => { setSelectedHistoryItem(item); setHistoryTab('TODOS'); playSound('click'); }} 
-                            className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"
-                            title="Ver Historial de Movimientos"
-                          >
-                            <History size={16} />
-                          </button>
+                        {item.peso && (item.categoria === 'MAYORISTA' || item.categoria === 'LOTE') && (
+                          <span className="text-[10px] font-black text-amber-600 mt-1 ml-1">{item.peso} KG</span>
                         )}
-                        <button onClick={() => setEditingItem(item)} className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"><Edit3 size={16} /></button>
-                        <button onClick={() => setDeletingId(item.id)} className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"><Trash2 size={16} /></button>
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="px-6 py-6 font-mono font-black text-slate-500 uppercase text-xs tracking-widest">
+                      {item.codigo}
+                    </td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                        {item.imagenUrl ? (
+                          <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform flex-shrink-0">
+                            <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0 ${
+                            isBelleza ? 'bg-pink-100 text-pink-500' : item.stockActual < 3 ? 'bg-red-100 text-red-500' : 'bg-blue-50 text-blue-500'
+                          }`}>
+                            {isBelleza ? <Sparkles size={22} /> : <Package size={22} />}
+                          </div>
+                        )}
+                        <div className="flex flex-col">
+                          <span className="font-black text-slate-900 uppercase text-sm tracking-tight leading-snug">{item.tipo}</span>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <span className="text-[9px] font-bold text-blue-500 uppercase tracking-widest">{item.proveedor}</span>
+                            {item.subcategoria && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                isBelleza ? 'bg-pink-50 text-pink-700 border border-pink-100' : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {item.subcategoria}
+                              </span>
+                            )}
+                            {item.especificaciones && (
+                              <>
+                                <span className="text-slate-300 text-[10px]">•</span>
+                                <span className="text-[10px] text-slate-500 italic max-w-sm truncate" title={item.especificaciones}>{item.especificaciones}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="font-black text-slate-900 text-xl tracking-tighter">
+                          ${Number(item.precioSugerido || 0).toLocaleString('es-CL')}
+                        </span>
+                        {canModify && Number(item.precioCosto || 0) > 0 && (
+                          <span className="text-[11px] font-bold text-slate-400 mt-0.5">
+                            Costo: ${Number(item.precioCosto || 0).toLocaleString('es-CL')}
+                          </span>
+                        )}
+                        {!!item.precioMayorista && item.precioMayorista > 0 && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300">
+                            May ({item.minUnidadesMayorista || 5}+ uds): ${Number(item.precioMayorista).toLocaleString('es-CL')}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <div className={`inline-flex flex-col items-center justify-center w-14 h-14 rounded-2xl ${item.stockActual > 3 ? 'bg-emerald-50 text-emerald-600' : item.stockActual > 0 ? 'bg-amber-50 text-amber-600 animate-pulse border border-amber-200' : 'bg-red-50 text-red-600'}`}>
+                        <span className="text-xl font-black leading-none">{item.stockActual}</span>
+                        <span className="text-[8px] font-black uppercase mt-1">
+                          {item.unidad === 'CAJA' ? 'Cajas' : item.unidad === 'PACK' ? 'Packs' : item.unidad === 'SET' ? 'Sets' : 'Uds'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-6 text-center">
+                      <button 
+                        onClick={() => canModify && togglePromocion(item.id)} 
+                        disabled={!canModify}
+                        className={`p-3 rounded-xl transition-all ${item.promocion ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'} ${!canModify ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}`}
+                        title={!canModify ? "No tienes permisos para modificar promociones" : "Alternar Promoción"}
+                      >
+                          <Tag size={20} />
+                      </button>
+                    </td>
+                    {canModify && (
+                      <td className="px-6 py-6 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={async () => {
+                              const newDepto: DepartamentoGiro = isBelleza ? 'TECNOLOGIA' : 'BELLEZA';
+                              await setProductDepartment(item.id, newDepto);
+                              playSound('success');
+                              showFeedback(`Producto reasignado a ${newDepto === 'BELLEZA' ? 'Belleza y Cuidados' : 'Tecnología'}.`, 'success');
+                            }}
+                            className={`p-3 rounded-xl transition-all shadow-sm ${
+                              isBelleza 
+                                ? 'bg-sky-50 text-sky-700 hover:bg-sky-600 hover:text-white' 
+                                : 'bg-pink-50 text-pink-700 hover:bg-pink-600 hover:text-white'
+                            }`}
+                            title={`Cambiar giro a ${isBelleza ? 'Tecnología' : 'Belleza'}`}
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+                          {currentUser?.rol === StaffRole.ADMIN && (
+                            <button 
+                              onClick={() => { setSelectedHistoryItem(item); setHistoryTab('TODOS'); playSound('click'); }} 
+                              className="p-3 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                              title="Ver Historial de Movimientos"
+                            >
+                              <History size={18} />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => {
+                              setEditingItem({
+                                ...item,
+                                departamento: item.departamento || getItemDepartamento(item),
+                                subcategoria: item.subcategoria || ''
+                              });
+                            }} 
+                            className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                            title="Editar Producto"
+                          >
+                            <Edit3 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => setDeletingId(item.id)} 
+                            className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                            title="Eliminar de Bodega"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -741,6 +1069,53 @@ export default function Stock() {
               <button onClick={() => setIsAdding(false)} className="p-4 hover:bg-white/10 rounded-full transition-colors"><X size={36} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-12 space-y-8 overflow-y-auto max-h-[70vh]">
+              {/* Selector de Giro / Departamento */}
+              <div className="space-y-3 bg-slate-50 p-5 rounded-[28px] border border-slate-100">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Giro / Departamento Comercial
+                </label>
+                <div className="grid grid-cols-2 gap-3 bg-white p-2 rounded-2xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setNewBale({ ...newBale, departamento: 'TECNOLOGIA', subcategoria: '' })}
+                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                      newBale.departamento === 'TECNOLOGIA'
+                        ? 'bg-sky-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Cpu size={16} /> 💻 Tecnología
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewBale({ ...newBale, departamento: 'BELLEZA', subcategoria: '' })}
+                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                      newBale.departamento === 'BELLEZA'
+                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sparkles size={16} /> 💄 Belleza & Cuidados
+                  </button>
+                </div>
+
+                <div className="pt-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Subcategoría
+                  </label>
+                  <select
+                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-indigo-500"
+                    value={newBale.subcategoria || ''}
+                    onChange={(e) => setNewBale({ ...newBale, subcategoria: e.target.value })}
+                  >
+                    <option value="">-- Seleccionar Subcategoría ({newBale.departamento === 'BELLEZA' ? 'Belleza' : 'Tecnología'}) --</option>
+                    {(DEPARTAMENTOS.find(d => d.id === newBale.departamento)?.subcategorias || []).map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Categoría de Venta</label>
@@ -947,6 +1322,53 @@ export default function Stock() {
               <button onClick={() => setEditingItem(null)} className="p-4 hover:bg-white/10 rounded-full transition-colors"><X size={36} /></button>
             </div>
             <form onSubmit={handleUpdate} className="p-12 space-y-8 overflow-y-auto max-h-[70vh]">
+              {/* Selector de Giro / Departamento */}
+              <div className="space-y-3 bg-slate-50 p-5 rounded-[28px] border border-slate-100">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Giro / Departamento Comercial
+                </label>
+                <div className="grid grid-cols-2 gap-3 bg-white p-2 rounded-2xl border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, departamento: 'TECNOLOGIA' })}
+                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                      (editingItem.departamento || getItemDepartamento(editingItem)) === 'TECNOLOGIA'
+                        ? 'bg-sky-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Cpu size={16} /> 💻 Tecnología
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, departamento: 'BELLEZA' })}
+                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                      (editingItem.departamento || getItemDepartamento(editingItem)) === 'BELLEZA'
+                        ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <Sparkles size={16} /> 💄 Belleza & Cuidados
+                  </button>
+                </div>
+
+                <div className="pt-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Subcategoría
+                  </label>
+                  <select
+                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-indigo-500"
+                    value={editingItem.subcategoria || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, subcategoria: e.target.value })}
+                  >
+                    <option value="">-- Seleccionar Subcategoría --</option>
+                    {(DEPARTAMENTOS.find(d => d.id === (editingItem.departamento || getItemDepartamento(editingItem)))?.subcategorias || []).map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Categoría de Venta</label>

@@ -5,6 +5,78 @@ export const LOGO_URL = "/mundo_tech_logo.png";
 
 export type LabelFormat = 'logistica' | 'industrial' | 'clasica';
 
+export type DepartamentoGiro = 'TECNOLOGIA' | 'BELLEZA';
+
+export interface DepartamentoDef {
+  id: DepartamentoGiro;
+  label: string;
+  shortLabel: string;
+  description: string;
+  subcategorias: string[];
+}
+
+export const DEPARTAMENTOS: DepartamentoDef[] = [
+  {
+    id: 'TECNOLOGIA',
+    label: 'Tecnología y Electrónica',
+    shortLabel: 'Tecnología',
+    description: 'Accesorios, gadgets, smartwatches, audio y periféricos',
+    subcategorias: [
+      'Smartwatch & Wearables',
+      'Audio & Auriculares',
+      'Periféricos & Gaming',
+      'Cables & Cargadores',
+      'Powerbanks & Baterías',
+      'Iluminación & Aros LED',
+      'Accesorios Celular',
+      'Otros Gadgets'
+    ]
+  },
+  {
+    id: 'BELLEZA',
+    label: 'Belleza, Maquillaje & Cuidado Personal',
+    shortLabel: 'Belleza & Cuidado',
+    description: 'Implementos de belleza, maquillaje, cuidado de piel (skincare) y cuerpo',
+    subcategorias: [
+      'Maquillaje & Cosmética',
+      'Cuidado Facial (Skincare)',
+      'Cuidado Corporal',
+      'Implementos & Herramientas',
+      'Aparatos de Belleza & Estética',
+      'Cuidado Capilar',
+      'Packs & Sets de Belleza'
+    ]
+  }
+];
+
+export const getItemDepartamento = (item: { departamento?: string; codigo?: string; tipo?: string; especificaciones?: string }): DepartamentoGiro => {
+  if (item.departamento === 'BELLEZA') return 'BELLEZA';
+  if (item.departamento === 'TECNOLOGIA') return 'TECNOLOGIA';
+  
+  // Heurística automática por prefijo de código
+  const code = (item.codigo || '').toUpperCase();
+  if (code.startsWith('BEL-') || code.startsWith('BEA-') || code.startsWith('MAQ-') || code.startsWith('SKIN-')) {
+    return 'BELLEZA';
+  }
+  
+  // Heurística automática por palabras clave en nombre o especificaciones
+  const text = `${item.tipo || ''} ${item.especificaciones || ''}`.toLowerCase();
+  const beautyKeywords = [
+    'maquillaje', 'labial', 'rimel', 'máscara', 'mascara', 'pestaña', 'ceja', 'corrector', 
+    'skincare', 'facial', 'serum', 'sérum', 'hidratante', 'bloqueador', 'solar',
+    'exfoliante', 'corporal', 'brocha', 'esponja', 'beauty blender', 'rodillo',
+    'gua sha', 'depilador', 'plancha pelo', 'rizador', 'perfume', 'uñas', 'esmalte', 'cosmético',
+    'bálsamo', 'tonico', 'tónico', 'mascarilla', 'limpiador facial', 'acido hialuronico',
+    'crema corporal', 'antiarrugas', 'colageno', 'colágeno', 'labios', 'blush', 'iluminador',
+    'sombras ojos', 'delineador', 'contorno ojos'
+  ];
+  if (beautyKeywords.some(kw => text.includes(kw))) {
+    return 'BELLEZA';
+  }
+  
+  return 'TECNOLOGIA';
+};
+
 export interface Customer {
   id: string;
   nombre: string;
@@ -189,6 +261,8 @@ export interface StockItem {
   disponible: boolean;
   unidad: 'UNIDAD' | 'PIEZA' | 'CAJA' | 'PACK' | 'SET' | string;
   categoria?: 'ESTANDAR' | 'MAYORISTA' | string;
+  departamento?: DepartamentoGiro;
+  subcategoria?: string;
   peso?: number; // Para bultos pesados o lotes (Opcional)
   promocion?: boolean;
   imagenUrl?: string;

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Sale, SaleItem, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig } from '../types';
+import { Sale, SaleItem, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig, getItemDepartamento, DepartamentoGiro } from '../types';
 import { db, storage } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs, addDoc, query, where, orderBy, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -472,6 +472,8 @@ interface StoreContextType {
   stockHistory: StockHistoryEvent[];
   addStockHistoryEvent: (event: Omit<StockHistoryEvent, 'id' | 'fecha'>) => Promise<void>;
   stockLoaded: boolean;
+  seedSampleBeautyProducts: () => Promise<number>;
+  setProductDepartment: (id: string, departamento: DepartamentoGiro, subcategoria?: string) => Promise<void>;
 }
 
 // Safe storage wrapper to prevent Safari private mode exception crashes
@@ -846,6 +848,8 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
               const data = d.data() as StockItem;
               return {
                 ...data,
+                departamento: data.departamento || getItemDepartamento(data),
+                subcategoria: data.subcategoria || '',
                 unidad: data.unidad === 'FARDO' ? 'UNIDAD' : (data.unidad || 'UNIDAD'),
                 categoria: data.categoria === 'FARDO' ? 'ESTANDAR' : (data.categoria || 'ESTANDAR')
               };
@@ -1298,10 +1302,13 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       }
 
       const newId = code; // ID is the code
+      const depto = item.departamento || getItemDepartamento(item);
       const rawData = { 
         ...item, 
         codigo: code, 
         id: newId, 
+        departamento: depto,
+        subcategoria: item.subcategoria || '',
         disponible: item.stockActual > 0,
         categoria: item.categoria || 'ESTANDAR'
       };
@@ -1342,7 +1349,15 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
         const newCode = updatedData.codigo.trim().toUpperCase();
         if (newCode !== item.codigo) {
           // Create new doc with new ID (code)
-          const newItem = { ...item, ...updatedData, codigo: newCode, id: newCode, disponible: (updatedData.stockActual ?? item.stockActual) > 0 };
+          const newItem = { 
+            ...item, 
+            ...updatedData, 
+            codigo: newCode, 
+            id: newCode, 
+            departamento: updatedData.departamento || item.departamento || getItemDepartamento(updatedData),
+            subcategoria: updatedData.subcategoria !== undefined ? updatedData.subcategoria : item.subcategoria,
+            disponible: (updatedData.stockActual ?? item.stockActual) > 0 
+          };
           const cleanNewItem = Object.fromEntries(Object.entries(newItem).filter(([_, v]) => v !== undefined));
           await setDoc(doc(db, 'stock', newCode), cleanNewItem);
           // Delete old doc
@@ -1361,7 +1376,13 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
         }
       }
 
-      const docData = { ...item, ...updatedData, disponible: (updatedData.stockActual ?? item.stockActual) > 0 };
+      const docData = { 
+        ...item, 
+        ...updatedData, 
+        departamento: updatedData.departamento || item.departamento || getItemDepartamento(updatedData),
+        subcategoria: updatedData.subcategoria !== undefined ? updatedData.subcategoria : item.subcategoria,
+        disponible: (updatedData.stockActual ?? item.stockActual) > 0 
+      };
       const cleanDocData = Object.fromEntries(Object.entries(docData).filter(([_, v]) => v !== undefined));
       await setDoc(doc(db, 'stock', id), cleanDocData);
       
@@ -1381,6 +1402,158 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       alert("Error al actualizar el producto en la base de datos: " + (e.message || e));
       throw e;
     }
+  };
+
+  const setProductDepartment = async (id: string, departamento: DepartamentoGiro, subcategoria?: string) => {
+    try {
+      const item = stock.find(i => i.id === id);
+      if (!item) return;
+      const updated = {
+        ...item,
+        departamento,
+        ...(subcategoria !== undefined ? { subcategoria } : {})
+      };
+      const cleanDocData = Object.fromEntries(Object.entries(updated).filter(([_, v]) => v !== undefined));
+      await setDoc(doc(db, 'stock', id), cleanDocData);
+    } catch (e: any) {
+      console.error("Error setting product department:", e);
+      throw e;
+    }
+  };
+
+  const seedSampleBeautyProducts = async (): Promise<number> => {
+    const sampleBeautyProducts: Omit<StockItem, 'id' | 'disponible'>[] = [
+      {
+        codigo: 'BEL-001',
+        tipo: 'Set de Brochas Profesionales 12 Pzs + Estuche',
+        proveedor: 'GLAM PRO',
+        precioCosto: 7500,
+        precioSugerido: 16990,
+        precioMayorista: 12990,
+        minUnidadesMayorista: 3,
+        stockActual: 24,
+        unidad: 'SET',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Implementos & Herramientas',
+        especificaciones: 'Cerdas sintéticas ultra suaves hipoalergénicas, virola de aluminio resistente, incluye estuche de viaje.'
+      },
+      {
+        codigo: 'BEL-002',
+        tipo: 'Rodillo Facial de Cuarzo Rosa + Gua Sha Antienvejecimiento',
+        proveedor: 'SKIN LUXE',
+        precioCosto: 4500,
+        precioSugerido: 12990,
+        precioMayorista: 8990,
+        minUnidadesMayorista: 5,
+        stockActual: 30,
+        unidad: 'SET',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Cuidado Facial (Skincare)',
+        especificaciones: 'Piedra 100% natural, estimula drenaje linfático, desinflama contorno de ojos y mejora absorción de sérums.'
+      },
+      {
+        codigo: 'BEL-003',
+        tipo: 'Espejo LED Táctil Recargable 3 Tonos de Luz USB',
+        proveedor: 'BEAUTY TECH',
+        precioCosto: 8000,
+        precioSugerido: 18990,
+        precioMayorista: 14500,
+        minUnidadesMayorista: 4,
+        stockActual: 18,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Aparatos de Belleza & Estética',
+        especificaciones: 'Batería recargable 1200mAh, sensor touch para brillo regulable, luz cálida/neutra/fría, rotación 90°.'
+      },
+      {
+        codigo: 'BEL-004',
+        tipo: 'Sérum Facial Ácido Hialurónico Puro + Vitamina C (30ml)',
+        proveedor: 'DERMA GLOW',
+        precioCosto: 5000,
+        precioSugerido: 14990,
+        precioMayorista: 9990,
+        minUnidadesMayorista: 6,
+        stockActual: 45,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Cuidado Facial (Skincare)',
+        especificaciones: 'Hidratación profunda 24h, efecto tensor y luminosidad instantánea. Libre de parabenos y crueldad animal.'
+      },
+      {
+        codigo: 'BEL-005',
+        tipo: 'Máscara de Pestañas Waterproof Efecto 4D Volumen y Longitud',
+        proveedor: 'GLAM PRO',
+        precioCosto: 3200,
+        precioSugerido: 8990,
+        precioMayorista: 5990,
+        minUnidadesMayorista: 6,
+        stockActual: 50,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Maquillaje & Cosmética',
+        especificaciones: 'Fórmula resistente al agua y sudor, cepillo de silicona curvado que separa cada pestaña sin grumos.'
+      },
+      {
+        codigo: 'BEL-006',
+        tipo: 'Paleta de Sombras 18 Tonos Glam & Nude Ultrapigmentada',
+        proveedor: 'GLAM PRO',
+        precioCosto: 6500,
+        precioSugerido: 15990,
+        precioMayorista: 11500,
+        minUnidadesMayorista: 4,
+        stockActual: 20,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Maquillaje & Cosmética',
+        especificaciones: '18 tonos mates, satinados y glitter de larga fijación con textura aterciopelada de alta difuminación.'
+      },
+      {
+        codigo: 'BEL-007',
+        tipo: 'Crema Corporal Hidratante Manteca de Karité & Vainilla 250ml',
+        proveedor: 'BOTANICAL CARE',
+        precioCosto: 4000,
+        precioSugerido: 10990,
+        precioMayorista: 7500,
+        minUnidadesMayorista: 6,
+        stockActual: 36,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Cuidado Corporal',
+        especificaciones: 'Nutrición intensa para piel seca, rápida absorción no grasa, aroma envolvente que dura todo el día.'
+      },
+      {
+        codigo: 'BEL-008',
+        tipo: 'Depilador Facial Eléctrico de Precisión Recargable USB',
+        proveedor: 'BEAUTY TECH',
+        precioCosto: 4800,
+        precioSugerido: 11990,
+        precioMayorista: 8500,
+        minUnidadesMayorista: 5,
+        stockActual: 28,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'BELLEZA',
+        subcategoria: 'Implementos & Herramientas',
+        especificaciones: 'Cabezal enchapado en oro hipoalergénico, luz LED integrada para máxima visibilidad, no causa irritación.'
+      }
+    ];
+
+    let inserted = 0;
+    for (const item of sampleBeautyProducts) {
+      const exists = stock.some(s => s.codigo === item.codigo);
+      if (!exists) {
+        await addStockItem(item);
+        inserted++;
+      }
+    }
+    return inserted;
   };
 
   const togglePromocion = async (id: string) => {
@@ -1432,7 +1605,15 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
         const code = (i.codigo || '').trim().toUpperCase();
         if (!code) continue;
         const newId = code;
-        const stockData = { ...i, codigo: code, id: newId, disponible: i.stockActual > 0 };
+        const depto = i.departamento || getItemDepartamento(i);
+        const stockData = { 
+          ...i, 
+          codigo: code, 
+          id: newId, 
+          departamento: depto,
+          subcategoria: i.subcategoria || '',
+          disponible: i.stockActual > 0 
+        };
         const cleanStockData = Object.fromEntries(Object.entries(stockData).filter(([_, v]) => v !== undefined));
         batch.set(doc(db, 'stock', newId), cleanStockData);
         count++;
@@ -2013,7 +2194,9 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       addPurchase, removePurchase, addAbono, removeAbono, getStats, getReportData, syncWithCloud, pushToCloud, isSyncing, lastSync: settings.lastSync,
       productionRecords, addProductionRecord, deleteProductionRecord,
       stockHistory, addStockHistoryEvent,
-      stockLoaded
+      stockLoaded,
+      setProductDepartment,
+      seedSampleBeautyProducts
     }}>
       {children}
     </StoreContext.Provider>

@@ -22,10 +22,12 @@ import {
   Flame,
   Clock,
   ArrowUpDown,
-  Eye
+  Eye,
+  Cpu,
+  Layers
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME } from '../types';
+import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento } from '../types';
 
 interface CartItem {
   item: StockItem;
@@ -38,6 +40,16 @@ type SortOption = 'default' | 'price-asc' | 'price-desc' | 'name-asc' | 'stock-d
 export default function CatalogoPublico() {
   const { stock, stockLoaded } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState<'TODOS' | 'TECNOLOGIA' | 'BELLEZA'>(() => {
+    try {
+      const search = window.location.search || window.location.hash.split('?')[1] || '';
+      const params = new URLSearchParams(search);
+      const d = params.get('depto')?.toUpperCase();
+      if (d === 'BELLEZA' || d === 'TECNOLOGIA') return d;
+    } catch {}
+    return 'TODOS';
+  });
+  const [subcategoriaFilter, setSubcategoriaFilter] = useState<string>('TODAS');
   const [activeTab, setActiveTab] = useState<CategoryTab>('TODOS');
   const [selectedProvider, setSelectedProvider] = useState<string>('TODOS');
   const [sortOption, setSortOption] = useState<SortOption>('default');
@@ -69,6 +81,15 @@ export default function CatalogoPublico() {
     return stock.filter(item => (item.stockActual || 0) > 0);
   }, [stock]);
 
+  const techCount = useMemo(() => availableStock.filter(s => (s.departamento || getItemDepartamento(s)) === 'TECNOLOGIA').length, [availableStock]);
+  const beautyCount = useMemo(() => availableStock.filter(s => (s.departamento || getItemDepartamento(s)) === 'BELLEZA').length, [availableStock]);
+
+  const availableSubcategories = useMemo(() => {
+    if (departmentFilter === 'TODOS') return [];
+    const found = DEPARTAMENTOS.find(d => d.id === departmentFilter);
+    return found ? found.subcategorias : [];
+  }, [departmentFilter]);
+
   // Providers list
   const providers = useMemo(() => {
     const set = new Set<string>();
@@ -89,13 +110,25 @@ export default function CatalogoPublico() {
     const query = normalize(searchTerm.trim());
 
     return availableStock.filter(item => {
+      // Department filter
+      if (departmentFilter !== 'TODOS') {
+        const itemDepto = item.departamento || getItemDepartamento(item);
+        if (itemDepto !== departmentFilter) return false;
+      }
+
+      // Subcategory filter
+      if (subcategoriaFilter !== 'TODAS') {
+        if ((item.subcategoria || '') !== subcategoriaFilter) return false;
+      }
+
       // Search matches
       if (query) {
         const matchName = normalize(item.tipo).includes(query);
         const matchCode = normalize(item.codigo).includes(query);
         const matchProvider = normalize(item.proveedor).includes(query);
+        const matchSubcat = normalize(item.subcategoria || '').includes(query);
         const matchSpecs = normalize(item.especificaciones || '').includes(query);
-        if (!matchName && !matchCode && !matchProvider && !matchSpecs) return false;
+        if (!matchName && !matchCode && !matchProvider && !matchSubcat && !matchSpecs) return false;
       }
 
       // Provider filter
@@ -132,7 +165,7 @@ export default function CatalogoPublico() {
           return (a.tipo || '').localeCompare(b.tipo || '');
       }
     });
-  }, [availableStock, searchTerm, selectedProvider, activeTab, sortOption]);
+  }, [availableStock, departmentFilter, subcategoriaFilter, searchTerm, selectedProvider, activeTab, sortOption]);
 
   // Cart operations
   const addToCart = (item: StockItem) => {
@@ -385,6 +418,81 @@ export default function CatalogoPublico() {
             </div>
           </div>
 
+          {/* Giro / Departamento Selector */}
+          <div className="pt-2 border-t border-slate-100 space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                id="btn-public-depto-todos"
+                onClick={() => { setDepartmentFilter('TODOS'); setSubcategoriaFilter('TODAS'); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+                  departmentFilter === 'TODOS'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Layers size={15} />
+                <span>Todo ({availableStock.length})</span>
+              </button>
+
+              <button
+                id="btn-public-depto-tech"
+                onClick={() => { setDepartmentFilter('TECNOLOGIA'); setSubcategoriaFilter('TODAS'); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+                  departmentFilter === 'TECNOLOGIA'
+                    ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
+                    : 'bg-sky-50 text-sky-800 hover:bg-sky-100'
+                }`}
+              >
+                <Cpu size={15} className={departmentFilter === 'TECNOLOGIA' ? 'text-white' : 'text-sky-600'} />
+                <span>Tecnología & Gadgets ({techCount})</span>
+              </button>
+
+              <button
+                id="btn-public-depto-belleza"
+                onClick={() => { setDepartmentFilter('BELLEZA'); setSubcategoriaFilter('TODAS'); }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all ${
+                  departmentFilter === 'BELLEZA'
+                    ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-600/30'
+                    : 'bg-pink-50 text-pink-800 hover:bg-pink-100'
+                }`}
+              >
+                <Sparkles size={15} className={departmentFilter === 'BELLEZA' ? 'text-white' : 'text-pink-600'} />
+                <span>Belleza & Cuidados ({beautyCount})</span>
+              </button>
+            </div>
+
+            {departmentFilter !== 'TODOS' && availableSubcategories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
+                  Subcategorías:
+                </span>
+                <button
+                  onClick={() => setSubcategoriaFilter('TODAS')}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                    subcategoriaFilter === 'TODAS'
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Todas
+                </button>
+                {availableSubcategories.map(sub => (
+                  <button
+                    key={sub}
+                    onClick={() => setSubcategoriaFilter(sub)}
+                    className={`px-3 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                      subcategoriaFilter === sub
+                        ? departmentFilter === 'BELLEZA' ? 'bg-pink-600 text-white shadow-sm' : 'bg-sky-600 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {sub}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Category Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
             {[
@@ -491,8 +599,13 @@ export default function CatalogoPublico() {
                         </span>
                       </div>
 
-                      {/* Origin Pill */}
-                      <div className="absolute bottom-3 left-3">
+                      {/* Origin and Giro Pill */}
+                      <div className="absolute bottom-3 left-3 flex items-center gap-1">
+                        <span className={`px-2.5 py-0.5 rounded-lg text-white text-[9px] font-black uppercase tracking-wider ${
+                          (item.departamento || getItemDepartamento(item)) === 'BELLEZA' ? 'bg-pink-600/90' : 'bg-sky-600/90'
+                        }`}>
+                          {(item.departamento || getItemDepartamento(item)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tech'}
+                        </span>
                         <span className="px-2.5 py-0.5 rounded-lg bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-black uppercase tracking-wider">
                           {item.proveedor || 'General'}
                         </span>
@@ -524,6 +637,16 @@ export default function CatalogoPublico() {
                         >
                           {item.tipo}
                         </h3>
+
+                        {item.subcategoria && (
+                          <span className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded ${
+                            (item.departamento || getItemDepartamento(item)) === 'BELLEZA'
+                              ? 'bg-pink-50 text-pink-700 border border-pink-100'
+                              : 'bg-sky-50 text-sky-700 border border-sky-100'
+                          }`}>
+                            {item.subcategoria}
+                          </span>
+                        )}
 
                         {item.especificaciones && (
                           <p className="text-slate-500 text-xs line-clamp-2 mt-1 italic">
@@ -627,10 +750,20 @@ export default function CatalogoPublico() {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-white text-[9px] font-black uppercase ${
+                            (item.departamento || getItemDepartamento(item)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
+                          }`}>
+                            {(item.departamento || getItemDepartamento(item)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tech'}
+                          </span>
                           <span className="text-[10px] font-mono font-bold text-slate-400">{item.codigo}</span>
                           <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] font-black uppercase">
                             {item.proveedor}
                           </span>
+                          {item.subcategoria && (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[9px] font-bold">
+                              {item.subcategoria}
+                            </span>
+                          )}
                           <span className="text-[10px] font-black text-emerald-600 uppercase">
                             Stock: {item.stockActual}
                           </span>
@@ -902,7 +1035,12 @@ export default function CatalogoPublico() {
                 <X size={18} />
               </button>
 
-              <div className="absolute bottom-3 left-4">
+              <div className="absolute bottom-3 left-4 flex items-center gap-1.5">
+                <span className={`px-3 py-1 rounded-xl text-white text-xs font-black uppercase ${
+                  (selectedProduct.departamento || getItemDepartamento(selectedProduct)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
+                }`}>
+                  {(selectedProduct.departamento || getItemDepartamento(selectedProduct)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
+                </span>
                 <span className="px-3 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md text-white text-xs font-black uppercase">
                   {selectedProduct.proveedor || 'General'}
                 </span>
@@ -928,6 +1066,11 @@ export default function CatalogoPublico() {
                 <span className="px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-black uppercase">
                   Unidad: {selectedProduct.unidad} {selectedProduct.peso ? `(${selectedProduct.peso} kg)` : ''}
                 </span>
+                {selectedProduct.subcategoria && (
+                  <span className="px-3 py-1 rounded-xl bg-pink-100 text-pink-800 text-xs font-black uppercase">
+                    {selectedProduct.subcategoria}
+                  </span>
+                )}
               </div>
 
               {/* Specifications */}

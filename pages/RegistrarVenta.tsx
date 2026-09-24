@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, Zap, ClipboardList, CheckCircle2, User, Phone, DollarSign, Package, MapPin, Tag, Truck, CreditCard, FileText, ChevronRight, Coins, Building2, Home, ShoppingBag, Store } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { SaleType, SaleStatus, StaffRole, CommissionType, DispatchType, DispatchMethod, DISPATCH_OPTIONS, DispatchOptionDef } from '../types';
+import { SaleType, SaleStatus, StaffRole, CommissionType, DispatchType, DispatchMethod, DISPATCH_OPTIONS, DispatchOptionDef, getItemDepartamento } from '../types';
 
 export default function RegistrarVenta() {
   const { stock, staff, customers, addSale, playSound, carriers } = useStore();
@@ -506,17 +506,27 @@ export default function RegistrarVenta() {
                       }} className="bg-amber-600 text-white rounded-2xl px-4">+</button>
                   </div>
                   {selectedNewItemStock && (
-                    <div className="mt-3 text-[10px] font-black uppercase tracking-wider">
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-wider">
+                      <span className={`px-2.5 py-1 rounded-xl text-white ${
+                        (selectedNewItemStock.departamento || getItemDepartamento(selectedNewItemStock)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
+                      }`}>
+                        {(selectedNewItemStock.departamento || getItemDepartamento(selectedNewItemStock)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
+                      </span>
+                      {selectedNewItemStock.subcategoria && (
+                        <span className="px-2 py-1 rounded-xl bg-slate-100 text-slate-700">
+                          {selectedNewItemStock.subcategoria}
+                        </span>
+                      )}
                       {selectedNewItemStock.stockActual <= 0 ? (
-                        <span className="text-red-500 bg-red-50 border border-red-200 px-2.5 py-1.5 rounded-lg inline-block">
+                        <span className="text-red-500 bg-red-50 border border-red-200 px-2.5 py-1 rounded-xl inline-block">
                           ⚠️ ¡Agotado! (Stock: {selectedNewItemStock.stockActual} {selectedNewItemStock.unidad}s)
                         </span>
                       ) : selectedNewItemStock.stockActual < 3 ? (
-                        <span className="text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1.5 rounded-lg inline-block">
+                        <span className="text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl inline-block">
                           ⚠️ Stock bajo: solo quedan {selectedNewItemStock.stockActual} {selectedNewItemStock.unidad}s
                         </span>
                       ) : (
-                        <span className="text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 rounded-lg inline-block">
+                        <span className="text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl inline-block">
                           ✅ Stock disponible: {selectedNewItemStock.stockActual} {selectedNewItemStock.unidad}s
                         </span>
                       )}
@@ -526,21 +536,31 @@ export default function RegistrarVenta() {
               ) : (
                 <div>
                   <div className="flex gap-2">
-                      <input required list="stock-suggestions" type="text" className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-2xl font-black focus:border-blue-500 outline-none transition-all uppercase" placeholder="CÓDIGO (Ej: TEC-001)" value={formData.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, false)}/>
+                      <input required list="stock-suggestions" type="text" className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-2xl font-black focus:border-blue-500 outline-none transition-all uppercase" placeholder="CÓDIGO (Ej: TEC-001 o BEL-001)" value={formData.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, false)}/>
                       <input required type="number" className="w-32 px-4 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-xl font-black outline-none transition-all" placeholder="VALOR" value={formData.valorUnitario || ''} onChange={(e) => setFormData({...formData, valorUnitario: Number(e.target.value)})}/>
                   </div>
                   {selectedStockItem && (
-                    <div className="mt-3 text-[11px] font-black uppercase tracking-wider">
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-black uppercase tracking-wider">
+                      <span className={`px-2.5 py-1 rounded-xl text-white ${
+                        (selectedStockItem.departamento || getItemDepartamento(selectedStockItem)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
+                      }`}>
+                        {(selectedStockItem.departamento || getItemDepartamento(selectedStockItem)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
+                      </span>
+                      {selectedStockItem.subcategoria && (
+                        <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
+                          {selectedStockItem.subcategoria}
+                        </span>
+                      )}
                       {selectedStockItem.stockActual <= 0 ? (
-                        <span className="text-red-500 bg-red-50 border border-red-100 px-3 py-1.5 rounded-xl inline-block">
+                        <span className="text-red-500 bg-red-50 border border-red-100 px-3 py-1 rounded-xl inline-block">
                           ⚠️ ¡Producto agotado! Stock: {selectedStockItem.stockActual} {selectedStockItem.unidad}s
                         </span>
                       ) : selectedStockItem.stockActual < 3 ? (
-                        <span className="text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-xl inline-block">
+                        <span className="text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-xl inline-block">
                           ⚠️ Stock bajo: solo quedan {selectedStockItem.stockActual} {selectedStockItem.unidad}s
                         </span>
                       ) : (
-                        <span className="text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl inline-block">
+                        <span className="text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-xl inline-block">
                           ✅ Stock disponible: {selectedStockItem.stockActual} {selectedStockItem.unidad}s
                         </span>
                       )}
@@ -549,7 +569,15 @@ export default function RegistrarVenta() {
                 </div>
               )}
               <datalist id="stock-suggestions">
-                {stock.filter(s => s.disponible).map(s => ( <option key={s.id} value={s.codigo}>{s.tipo}{s.proveedor ? ` (${s.proveedor})` : ''} [Stock: {s.stockActual}]</option> ))}
+                {stock.filter(s => s.disponible).map(s => {
+                  const depto = s.departamento || getItemDepartamento(s);
+                  const tag = depto === 'BELLEZA' ? '💄 [Belleza]' : '💻 [Tech]';
+                  return (
+                    <option key={s.id} value={s.codigo}>
+                      {tag} {s.tipo} {s.subcategoria ? `(${s.subcategoria})` : ''} - Stock: {s.stockActual}
+                    </option>
+                  );
+                })}
               </datalist>
             </div>
             
