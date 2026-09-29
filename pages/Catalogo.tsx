@@ -26,10 +26,13 @@ import {
   Sparkles,
   Cpu,
   Layers,
-  RotateCcw
+  RotateCcw,
+  Maximize2,
+  ChevronRight
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento } from '../types';
+import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento, getItemImages } from '../types';
+import { ProductImageViewerModal } from '../components/ProductImageViewerModal';
 
 type SortOption = 'alpha-asc' | 'alpha-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc';
 type FilterCategory = 'TODOS' | 'INDIVIDUAL' | 'LOTE' | 'MAYORISTA';
@@ -38,6 +41,7 @@ const TableHeader = () => (
   <thead>
     <tr className="border-b-2 border-slate-900 bg-slate-100 print:bg-slate-100 text-slate-800">
       <th className="px-3 py-2 text-[10px] font-black uppercase text-left w-20">Giro</th>
+      <th className="px-3 py-2 text-[10px] font-black uppercase text-left w-14">Foto</th>
       <th className="px-3 py-2 text-[10px] font-black uppercase text-left w-16">Cód</th>
       <th className="px-3 py-2 text-[10px] font-black uppercase text-left">Producto / Tipo</th>
       <th className="px-3 py-2 text-[10px] font-black uppercase text-left w-24">Origen</th>
@@ -50,11 +54,13 @@ const TableHeader = () => (
 
 const ProductRow: React.FC<{ 
   item: StockItem;
+  onOpenViewer?: (item: StockItem) => void;
   onSelectDepto?: (depto: DepartamentoGiro) => void;
   onSelectSubcategoria?: (sub: string) => void;
-}> = ({ item, onSelectDepto, onSelectSubcategoria }) => {
+}> = ({ item, onOpenViewer, onSelectDepto, onSelectSubcategoria }) => {
   const depto = item.departamento || getItemDepartamento(item);
   const isBelleza = depto === 'BELLEZA';
+  const images = getItemImages(item);
 
   return (
     <tr className="border-b border-slate-200 hover:bg-slate-50 transition-colors print:border-slate-300">
@@ -69,6 +75,27 @@ const ProductRow: React.FC<{
         >
           {isBelleza ? '💄 Belleza' : '💻 Tech'}
         </button>
+      </td>
+      <td className="px-2 py-1.5">
+        {images.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => onOpenViewer?.(item)}
+            title="Ver fotos en tamaño completo"
+            className="relative w-10 h-10 rounded-xl overflow-hidden border border-slate-200 hover:border-emerald-500 hover:scale-105 transition-all shadow-xs cursor-pointer block"
+          >
+            <img src={images[0]} alt={item.tipo} className="w-full h-full object-cover" />
+            {images.length > 1 && (
+              <span className="absolute bottom-0 right-0 px-1 text-[7px] font-black bg-slate-900/90 text-amber-300 rounded-tl shadow-xs">
+                +{images.length}
+              </span>
+            )}
+          </button>
+        ) : (
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isBelleza ? 'bg-pink-50 text-pink-400' : 'bg-slate-100 text-slate-400'}`}>
+            {isBelleza ? <Sparkles size={16} /> : <Package size={16} />}
+          </div>
+        )}
       </td>
       <td className="px-3 py-2 font-mono font-bold text-slate-500 text-xs">
         {item.codigo}
@@ -131,6 +158,213 @@ const ProductRow: React.FC<{
   );
 };
 
+const CatalogDigitalCard: React.FC<{
+  item: StockItem;
+  onOpenViewer: (item: StockItem, imageIndex: number) => void;
+  onSelectDepto: (depto: DepartamentoGiro) => void;
+  onSelectSubcategoria: (sub: string) => void;
+  playSound: (type: any) => void;
+}> = ({ item, onOpenViewer, onSelectDepto, onSelectSubcategoria, playSound }) => {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const images = getItemImages(item);
+  const itemDepto = item.departamento || getItemDepartamento(item);
+  const isBelleza = itemDepto === 'BELLEZA';
+
+  const currentImage = images[activeImageIndex] || item.imagenUrl;
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIndex(prev => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleNext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIndex(prev => (prev + 1) % images.length);
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:border-emerald-400 hover:shadow-md transition-all group">
+      {/* Image Area */}
+      <div 
+        onClick={() => onOpenViewer(item, activeImageIndex)}
+        className="relative w-full h-44 bg-slate-100 flex items-center justify-center overflow-hidden cursor-pointer"
+        title="Hacer clic para ver foto completa sin cortes o ampliar"
+      >
+        {currentImage ? (
+          <img 
+            src={currentImage} 
+            alt={item.tipo} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center text-slate-400">
+            {isBelleza ? <Sparkles size={28} className="text-pink-400" /> : <Package size={28} />}
+            <span className="text-[9px] font-black uppercase mt-1 tracking-wider text-slate-400">{item.unidad}</span>
+          </div>
+        )}
+
+        {/* Hover Overlay "Ver completa" */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none z-10">
+          <span className="px-3 py-1.5 rounded-xl bg-white/95 text-slate-900 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg backdrop-blur-xs">
+            <Maximize2 size={13} /> Ver Completa
+          </span>
+        </div>
+
+        {/* Top Badges */}
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20">
+          {images.length > 1 && (
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-900/80 text-amber-300 backdrop-blur-xs shadow-xs">
+              📸 {activeImageIndex + 1}/{images.length}
+            </span>
+          )}
+          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shadow-xs ${
+            item.stockActual <= 2 ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white'
+          }`}>
+            Stock: {item.stockActual}
+          </span>
+        </div>
+
+        {/* Bottom Badges */}
+        <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 z-20">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectDepto(isBelleza ? 'BELLEZA' : 'TECNOLOGIA');
+              playSound('click');
+            }}
+            title={`Filtrar solo productos de ${isBelleza ? 'Belleza' : 'Tecnología'}`}
+            className={`px-2 py-0.5 rounded text-white text-[9px] font-black uppercase transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs ${
+              isBelleza ? 'bg-pink-600/95 hover:bg-pink-500' : 'bg-sky-600/95 hover:bg-sky-500'
+            }`}
+          >
+            {isBelleza ? '💄 Belleza' : '💻 Tech'}
+          </button>
+          <span className="px-2 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-black uppercase">
+            {item.proveedor || 'General'}
+          </span>
+        </div>
+
+        {/* Navigation arrows for multi-image cards */}
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrev}
+              title="Foto anterior"
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-md"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={handleNext}
+              title="Foto siguiente"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-md"
+            >
+              <ChevronRight size={16} />
+            </button>
+
+            {/* Dots */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-20 bg-slate-900/60 px-2 py-0.5 rounded-full backdrop-blur-xs">
+              {images.map((_, dotIdx) => (
+                <button
+                  key={dotIdx}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveImageIndex(dotIdx);
+                  }}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${
+                    dotIdx === activeImageIndex ? 'w-3 bg-amber-400' : 'bg-white/60 hover:bg-white'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Card Body */}
+      <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+        <div>
+          <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-0.5">
+            <span>{item.codigo}</span>
+            <span className="uppercase font-bold">{item.unidad}</span>
+          </div>
+
+          <h3 className="font-black text-slate-900 text-sm leading-tight uppercase italic line-clamp-2">
+            {item.tipo}
+          </h3>
+
+          {item.subcategoria && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectDepto(isBelleza ? 'BELLEZA' : 'TECNOLOGIA');
+                onSelectSubcategoria(item.subcategoria!);
+                playSound('click');
+              }}
+              title={`Filtrar por subcategoría: ${item.subcategoria}`}
+              className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded transition-transform hover:scale-105 active:scale-95 cursor-pointer text-left ${
+                isBelleza ? 'bg-pink-50 text-pink-700 border border-pink-100 hover:bg-pink-100' : 'bg-sky-50 text-sky-700 border border-sky-100 hover:bg-sky-100'
+              }`}
+            >
+              {item.subcategoria}
+            </button>
+          )}
+
+          {item.especificaciones && (
+            <p className="text-slate-400 text-xs italic line-clamp-1 mt-1">
+              {item.especificaciones}
+            </p>
+          )}
+        </div>
+
+        {/* Pricing Box */}
+        <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] uppercase font-bold text-slate-400">Detalle:</span>
+            <span className="text-base font-black text-slate-900">
+              ${(item.precioSugerido || 0).toLocaleString('es-CL')}
+            </span>
+          </div>
+
+          {!!item.precioMayorista && item.precioMayorista > 0 && (
+            <div className="flex items-center justify-between text-[10px] text-amber-800 font-bold border-t border-slate-200/80 pt-1">
+              <span>Mayorista (≥{item.minUnidadesMayorista || 5}u):</span>
+              <span className="font-black">${item.precioMayorista.toLocaleString('es-CL')}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons: WhatsApp & View Full */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              const msg = `Hola! Consulta por *${item.tipo}* (${item.codigo}). Precio detalle: $${item.precioSugerido?.toLocaleString('es-CL')}. Stock disponible: ${item.stockActual} uds.`;
+              window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            }}
+            className="flex-1 py-1.5 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <MessageCircle size={14} />
+            <span>WhatsApp</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenViewer(item, activeImageIndex)}
+            title="Ver imagen completa y galería"
+            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors"
+          >
+            <Maximize2 size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Catalogo() {
   const { stock, playSound } = useStore();
   const location = useLocation();
@@ -150,6 +384,10 @@ export default function Catalogo() {
   // QR Code Modal State
   const [showQrModal, setShowQrModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  // Fullscreen Image Lightbox Modal State
+  const [viewerProduct, setViewerProduct] = useState<StockItem | null>(null);
+  const [viewerImageIndex, setViewerImageIndex] = useState<number>(0);
 
   const techCount = useMemo(() => stock.filter(s => (s.departamento || getItemDepartamento(s)) === 'TECNOLOGIA').length, [stock]);
   const beautyCount = useMemo(() => stock.filter(s => (s.departamento || getItemDepartamento(s)) === 'BELLEZA').length, [stock]);
@@ -905,125 +1143,26 @@ export default function Catalogo() {
         {viewMode === 'digital' ? (
           /* DIGITAL CARDS GRID */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 print:grid-cols-2">
-            {sortedAndFilteredStock.map(item => {
-              const itemDepto = item.departamento || getItemDepartamento(item);
-              const isBelleza = itemDepto === 'BELLEZA';
-
-              return (
-              <div 
-                key={item.id} 
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col justify-between hover:border-emerald-400 hover:shadow-md transition-all group"
-              >
-                {/* Image */}
-                <div className="relative w-full h-40 bg-slate-100 flex items-center justify-center overflow-hidden">
-                  {item.imagenUrl ? (
-                    <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-slate-400">
-                      {isBelleza ? <Sparkles size={28} className="text-pink-400" /> : <Package size={28} />}
-                      <span className="text-[9px] font-black uppercase mt-1 tracking-wider text-slate-400">{item.unidad}</span>
-                    </div>
-                  )}
-                  
-                  <div className="absolute top-2.5 right-2.5">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase shadow-sm ${
-                      item.stockActual <= 2 ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white'
-                    }`}>
-                      Stock: {item.stockActual}
-                    </span>
-                  </div>
-
-                  <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDepartmentFilter(isBelleza ? 'BELLEZA' : 'TECNOLOGIA');
-                        setSubcategoriaFilter('TODAS');
-                        playSound('click');
-                      }}
-                      title={`Filtrar solo productos de ${isBelleza ? 'Belleza' : 'Tecnología'}`}
-                      className={`px-2 py-0.5 rounded text-white text-[9px] font-black uppercase transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs ${
-                        isBelleza ? 'bg-pink-600/95 hover:bg-pink-500' : 'bg-sky-600/95 hover:bg-sky-500'
-                      }`}
-                    >
-                      {isBelleza ? '💄 Belleza' : '💻 Tech'}
-                    </button>
-                    <span className="px-2 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-black uppercase">
-                      {item.proveedor || 'General'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-0.5">
-                      <span>{item.codigo}</span>
-                      <span className="uppercase font-bold">{item.unidad}</span>
-                    </div>
-
-                    <h3 className="font-black text-slate-900 text-sm leading-tight uppercase italic line-clamp-2">
-                      {item.tipo}
-                    </h3>
-
-                    {item.subcategoria && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDepartmentFilter(isBelleza ? 'BELLEZA' : 'TECNOLOGIA');
-                          setSubcategoriaFilter(item.subcategoria!);
-                          playSound('click');
-                        }}
-                        title={`Filtrar por subcategoría: ${item.subcategoria}`}
-                        className={`inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded transition-transform hover:scale-105 active:scale-95 cursor-pointer text-left ${
-                          isBelleza ? 'bg-pink-50 text-pink-700 border border-pink-100 hover:bg-pink-100' : 'bg-sky-50 text-sky-700 border border-sky-100 hover:bg-sky-100'
-                        }`}
-                      >
-                        {item.subcategoria}
-                      </button>
-                    )}
-
-                    {item.especificaciones && (
-                      <p className="text-slate-400 text-xs italic line-clamp-1 mt-1">
-                        {item.especificaciones}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Pricing Box */}
-                  <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[10px] uppercase font-bold text-slate-400">Detalle:</span>
-                      <span className="text-base font-black text-slate-900">
-                        ${(item.precioSugerido || 0).toLocaleString('es-CL')}
-                      </span>
-                    </div>
-
-                    {!!item.precioMayorista && item.precioMayorista > 0 && (
-                      <div className="flex items-center justify-between text-[10px] text-amber-800 font-bold border-t border-slate-200/80 pt-1">
-                        <span>Mayorista (≥{item.minUnidadesMayorista || 5}u):</span>
-                        <span className="font-black">${item.precioMayorista.toLocaleString('es-CL')}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Share button */}
-                  <button
-                    onClick={() => {
-                      const msg = `Hola! Consulta por *${item.tipo}* (${item.codigo}). Precio detalle: $${item.precioSugerido?.toLocaleString('es-CL')}. Stock disponible: ${item.stockActual} uds.`;
-                      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-                    }}
-                    className="w-full py-1.5 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <MessageCircle size={14} />
-                    <span>Compartir por WhatsApp</span>
-                  </button>
-                </div>
-              </div>
-              );
-            })}
+            {sortedAndFilteredStock.map(item => (
+              <CatalogDigitalCard
+                key={item.id}
+                item={item}
+                onOpenViewer={(it, idx) => {
+                  setViewerProduct(it);
+                  setViewerImageIndex(idx);
+                }}
+                onSelectDepto={(d) => {
+                  setDepartmentFilter(d);
+                  setSubcategoriaFilter('TODAS');
+                  playSound('click');
+                }}
+                onSelectSubcategoria={(sub) => {
+                  setSubcategoriaFilter(sub);
+                  playSound('click');
+                }}
+                playSound={playSound}
+              />
+            ))}
           </div>
         ) : (
           /* TABLE LIST MODE */
@@ -1035,6 +1174,10 @@ export default function Catalogo() {
                   <ProductRow 
                     key={item.id} 
                     item={item} 
+                    onOpenViewer={(it) => {
+                      setViewerProduct(it);
+                      setViewerImageIndex(0);
+                    }}
                     onSelectDepto={(d) => {
                       setDepartmentFilter(d);
                       setSubcategoriaFilter('TODAS');
@@ -1105,6 +1248,14 @@ export default function Catalogo() {
           </div>
         </div>
       )}
+
+      {/* FULLSCREEN IMAGE VIEWER MODAL */}
+      <ProductImageViewerModal
+        isOpen={!!viewerProduct}
+        item={viewerProduct}
+        initialIndex={viewerImageIndex}
+        onClose={() => setViewerProduct(null)}
+      />
 
       {/* Print Styles */}
       <style>{`

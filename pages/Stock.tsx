@@ -3,7 +3,9 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { PackagePlus, Search, Package, FileUp, X, Download, Tag, Boxes, Edit3, Trash2, Save, AlertTriangle, Layers, Square, Filter, History, Calendar, User, ArrowUpRight, ArrowDownLeft, TrendingUp, Camera, Upload, DollarSign, Sparkles, Cpu, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StaffRole, StockItem, DepartamentoGiro, DEPARTAMENTOS, getItemDepartamento } from '../types';
+import { StaffRole, StockItem, DepartamentoGiro, DEPARTAMENTOS, getItemDepartamento, getItemImages } from '../types';
+import { ProductImageGalleryInput } from '../components/ProductImageGalleryInput';
+import { ProductImageViewerModal } from '../components/ProductImageViewerModal';
 
 function parseLocalDate(dateStr: string): Date {
   if (!dateStr) return new Date();
@@ -73,9 +75,12 @@ export default function Stock() {
     subcategoria: '',
     peso: 0,
     imagenUrl: '',
+    imagenes: [] as string[],
     especificaciones: '',
     comision: undefined as number | undefined
   });
+  const [viewerModalItem, setViewerModalItem] = useState<StockItem | null>(null);
+  const [viewerModalIndex, setViewerModalIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -457,7 +462,14 @@ export default function Stock() {
           return;
       }
 
-      await addStockItem({ ...newBale, codigo: finalCodigo, proveedor: (newBale.proveedor || '').toUpperCase() });
+      const primaryImage = (newBale.imagenes && newBale.imagenes.length > 0) ? newBale.imagenes[0] : (newBale.imagenUrl || '');
+      await addStockItem({ 
+        ...newBale, 
+        codigo: finalCodigo, 
+        proveedor: (newBale.proveedor || '').toUpperCase(),
+        imagenUrl: primaryImage,
+        imagenes: newBale.imagenes && newBale.imagenes.length > 0 ? newBale.imagenes : (primaryImage ? [primaryImage] : [])
+      });
       setNewBale({ 
         codigo: '', 
         tipo: '', 
@@ -473,6 +485,7 @@ export default function Stock() {
         subcategoria: '',
         peso: 0, 
         imagenUrl: '', 
+        imagenes: [],
         especificaciones: '', 
         comision: undefined 
       });
@@ -503,7 +516,13 @@ export default function Stock() {
     }
 
     try {
-      await updateStockItem(editingItem.id, { ...editingItem, proveedor: (editingItem.proveedor || '').toUpperCase() });
+      const primaryImage = (editingItem.imagenes && editingItem.imagenes.length > 0) ? editingItem.imagenes[0] : (editingItem.imagenUrl || '');
+      await updateStockItem(editingItem.id, { 
+        ...editingItem, 
+        proveedor: (editingItem.proveedor || '').toUpperCase(),
+        imagenUrl: primaryImage,
+        imagenes: editingItem.imagenes && editingItem.imagenes.length > 0 ? editingItem.imagenes : (primaryImage ? [primaryImage] : [])
+      });
       setEditingItem(null);
       playSound('success');
       showFeedback('Producto actualizado correctamente.', 'success');
@@ -931,17 +950,34 @@ export default function Stock() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
-                        {item.imagenUrl ? (
-                          <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform flex-shrink-0">
-                            <img src={item.imagenUrl} alt={item.tipo} className="w-full h-full object-cover" />
-                          </div>
-                        ) : (
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0 ${
-                            isBelleza ? 'bg-pink-100 text-pink-500' : item.stockActual < 3 ? 'bg-red-100 text-red-500' : 'bg-blue-50 text-blue-500'
-                          }`}>
-                            {isBelleza ? <Sparkles size={22} /> : <Package size={22} />}
-                          </div>
-                        )}
+                        {(() => {
+                          const itemImgs = getItemImages(item);
+                          const hasImages = itemImgs.length > 0;
+                          return hasImages ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setViewerModalItem(item);
+                                setViewerModalIndex(0);
+                              }}
+                              title="Hacer clic para ver imágenes en tamaño completo y galería"
+                              className="relative w-12 h-12 rounded-2xl overflow-hidden border border-slate-200 group-hover:scale-110 transition-transform flex-shrink-0 cursor-pointer shadow-xs focus:ring-2 focus:ring-emerald-500"
+                            >
+                              <img src={itemImgs[0]} alt={item.tipo} className="w-full h-full object-cover" />
+                              {itemImgs.length > 1 && (
+                                <span className="absolute bottom-0 right-0 px-1 text-[8px] font-black bg-slate-900/90 text-amber-300 rounded-tl shadow-xs">
+                                  +{itemImgs.length}
+                                </span>
+                              )}
+                            </button>
+                          ) : (
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0 ${
+                              isBelleza ? 'bg-pink-100 text-pink-500' : item.stockActual < 3 ? 'bg-red-100 text-red-500' : 'bg-blue-50 text-blue-500'
+                            }`}>
+                              {isBelleza ? <Sparkles size={22} /> : <Package size={22} />}
+                            </div>
+                          );
+                        })()}
                         <div className="flex flex-col">
                           <span className="font-black text-slate-900 uppercase text-sm tracking-tight leading-snug">{item.tipo}</span>
                           <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -1251,55 +1287,28 @@ export default function Stock() {
                 />
               </div>
 
-              {/* Foto del Producto (Opcional) */}
+              {/* Galería de Fotos del Producto */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Foto del Producto (Opcional)</label>
-                <div className="flex gap-6 items-center bg-slate-50 p-6 rounded-[28px] border-2 border-dashed border-slate-200 hover:border-emerald-500 transition-all">
-                  {newBale.imagenUrl ? (
-                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 flex-shrink-0">
-                      <img src={newBale.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setNewBale({ ...newBale, imagenUrl: '' })} 
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-24 h-24 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200/50">
-                      <Camera size={32} />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <p className="text-sm font-black text-slate-700">Adjuntar Foto del Producto</p>
-                    <p className="text-xs text-slate-400 mt-1">Sube una imagen desde tu cámara o galería para que se visualice en el catálogo que compartes con los clientes.</p>
-                    <div className="mt-4 flex gap-2 items-center">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        id="product-image-upload" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(file, false);
-                        }}
-                        disabled={isUploading}
-                      />
-                      <label 
-                        htmlFor="product-image-upload" 
-                        className={`px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-black transition-all ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
-                      >
-                        {isUploading ? 'Subiendo...' : 'Seleccionar Archivo'}
-                      </label>
-                      {isUploading && (
-                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">
-                          Procesando Imagen...
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ProductImageGalleryInput
+                  images={newBale.imagenes && newBale.imagenes.length > 0 ? newBale.imagenes : (newBale.imagenUrl ? [newBale.imagenUrl] : [])}
+                  onChange={(imgs) => {
+                    setNewBale({
+                      ...newBale,
+                      imagenes: imgs,
+                      imagenUrl: imgs[0] || ''
+                    });
+                  }}
+                  productId={newBale.codigo || 'nuevo'}
+                  onPreviewImage={(_url, idx) => {
+                    setViewerModalItem({
+                      ...newBale,
+                      id: 'preview',
+                      disponible: true,
+                      imagenes: newBale.imagenes && newBale.imagenes.length > 0 ? newBale.imagenes : (newBale.imagenUrl ? [newBale.imagenUrl] : [])
+                    } as StockItem);
+                    setViewerModalIndex(idx);
+                  }}
+                />
               </div>
 
               <button type="submit" className="w-full py-7 bg-slate-900 text-white rounded-[32px] font-black text-2xl shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-4 active:scale-95">
@@ -1502,55 +1511,26 @@ export default function Stock() {
                 />
               </div>
 
-              {/* Foto del Producto */}
+              {/* Galería de Fotos del Producto */}
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 block">Foto del Producto (Opcional)</label>
-                <div className="flex gap-6 items-center bg-slate-50 p-6 rounded-[28px] border-2 border-dashed border-slate-200 hover:border-blue-500 transition-all">
-                  {editingItem.imagenUrl ? (
-                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden border border-slate-200 flex-shrink-0">
-                      <img src={editingItem.imagenUrl} alt="Preview" className="w-full h-full object-cover" />
-                      <button 
-                        type="button" 
-                        onClick={() => setEditingItem({ ...editingItem, imagenUrl: '' })} 
-                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="w-24 h-24 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-200/50">
-                      <Camera size={32} />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <p className="text-sm font-black text-slate-700">Actualizar Foto del Producto</p>
-                    <p className="text-xs text-slate-400 mt-1">Sube una nueva foto para actualizar o reemplazar la imagen actual del producto en el catálogo.</p>
-                    <div className="mt-4 flex gap-2 items-center">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
-                        id="product-image-edit" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(file, true);
-                        }}
-                        disabled={isUploading}
-                      />
-                      <label 
-                        htmlFor="product-image-edit" 
-                        className={`px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-blue-700 transition-all ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
-                      >
-                        {isUploading ? 'Subiendo...' : 'Seleccionar Archivo'}
-                      </label>
-                      {isUploading && (
-                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest animate-pulse">
-                          Procesando Imagen...
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ProductImageGalleryInput
+                  images={editingItem.imagenes && editingItem.imagenes.length > 0 ? editingItem.imagenes : (editingItem.imagenUrl ? [editingItem.imagenUrl] : [])}
+                  onChange={(imgs) => {
+                    setEditingItem({
+                      ...editingItem,
+                      imagenes: imgs,
+                      imagenUrl: imgs[0] || ''
+                    });
+                  }}
+                  productId={editingItem.codigo || editingItem.id}
+                  onPreviewImage={(_url, idx) => {
+                    setViewerModalItem({
+                      ...editingItem,
+                      imagenes: editingItem.imagenes && editingItem.imagenes.length > 0 ? editingItem.imagenes : (editingItem.imagenUrl ? [editingItem.imagenUrl] : [])
+                    });
+                    setViewerModalIndex(idx);
+                  }}
+                />
               </div>
 
               <button type="submit" className="w-full py-7 bg-blue-600 text-white rounded-[32px] font-black text-2xl shadow-2xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 active:scale-95">
@@ -1747,6 +1727,14 @@ export default function Stock() {
           </div>
         </div>
       )}
+
+      {/* FULLSCREEN IMAGE VIEWER MODAL */}
+      <ProductImageViewerModal
+        isOpen={!!viewerModalItem}
+        item={viewerModalItem}
+        initialIndex={viewerModalIndex}
+        onClose={() => setViewerModalItem(null)}
+      />
     </div>
   );
 }

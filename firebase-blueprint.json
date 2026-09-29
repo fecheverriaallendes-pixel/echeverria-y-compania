@@ -26,6 +26,7 @@
         "codigo": { "type": "string" },
         "stockActual": { "type": "number" },
         "imagenUrl": { "type": "string" },
+        "imagenes": { "type": "array", "items": { "type": "string" } },
         "especificaciones": { "type": "string" }
       },
       "required": ["codigo", "stockActual"]

@@ -24,10 +24,15 @@ import {
   ArrowUpDown,
   Eye,
   Cpu,
-  Layers
+  Layers,
+  ChevronLeft,
+  Maximize2,
+  Minimize2,
+  Download
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento } from '../types';
+import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento, getItemImages } from '../types';
+import { ProductImageViewerModal } from '../components/ProductImageViewerModal';
 
 interface CartItem {
   item: StockItem;
@@ -67,6 +72,9 @@ export default function CatalogoPublico() {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
+  const [modalActiveImageIndex, setModalActiveImageIndex] = useState(0);
+  const [modalFitMode, setModalFitMode] = useState<'contain' | 'cover'>('contain');
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Persist cart
@@ -567,26 +575,41 @@ export default function CatalogoPublico() {
                   >
                     {/* Image / Header Thumbnail */}
                     <div 
-                      onClick={() => setSelectedProduct(item)}
+                      onClick={() => {
+                        setSelectedProduct(item);
+                        setModalActiveImageIndex(0);
+                        setModalFitMode('contain');
+                      }}
                       className="relative w-full h-44 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden cursor-pointer"
                     >
-                      {item.imagenUrl ? (
-                        <img 
-                          src={item.imagenUrl} 
-                          alt={item.tipo} 
-                          loading="lazy"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
-                          <div className="w-14 h-14 rounded-2xl bg-white/80 shadow-inner flex items-center justify-center text-slate-500 group-hover:text-emerald-600 transition-colors">
-                            <Package size={28} />
+                      {(() => {
+                        const itemImgs = getItemImages(item);
+                        const mainImg = itemImgs[0] || item.imagenUrl;
+                        return mainImg ? (
+                          <>
+                            <img 
+                              src={mainImg} 
+                              alt={item.tipo} 
+                              loading="lazy"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                            />
+                            {itemImgs.length > 1 && (
+                              <span className="absolute top-3 left-3 px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-900/80 text-amber-300 backdrop-blur-xs shadow-xs z-10">
+                                📸 {itemImgs.length} fotos
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-slate-400 gap-2 p-4 text-center">
+                            <div className="w-14 h-14 rounded-2xl bg-white/80 shadow-inner flex items-center justify-center text-slate-500 group-hover:text-emerald-600 transition-colors">
+                              <Package size={28} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                              {item.unidad || 'UNIDAD'}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                            {item.unidad || 'UNIDAD'}
-                          </span>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Stock Badge */}
                       <div className="absolute top-3 right-3">
@@ -1013,39 +1036,140 @@ export default function CatalogoPublico() {
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-[32px] max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             
-            {/* Modal Header Image */}
-            <div className="relative w-full h-56 bg-slate-100 flex items-center justify-center overflow-hidden">
-              {selectedProduct.imagenUrl ? (
-                <img 
-                  src={selectedProduct.imagenUrl} 
-                  alt={selectedProduct.tipo} 
-                  className="w-full h-full object-cover" 
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
-                  <Package size={48} />
-                  <span className="text-xs font-black uppercase tracking-widest">{selectedProduct.unidad}</span>
+            {/* Modal Header Image Gallery */}
+            {(() => {
+              const modalImages = getItemImages(selectedProduct);
+              const currentModalImg = modalImages[modalActiveImageIndex] || selectedProduct.imagenUrl;
+              const hasMultiple = modalImages.length > 1;
+
+              return (
+                <div className="flex flex-col bg-slate-900 border-b border-slate-800">
+                  <div className="relative w-full h-64 sm:h-72 bg-slate-950 flex items-center justify-center overflow-hidden">
+                    {currentModalImg ? (
+                      <img 
+                        src={currentModalImg} 
+                        alt={selectedProduct.tipo} 
+                        className={`w-full h-full transition-all duration-300 ${
+                          modalFitMode === 'contain' ? 'object-contain' : 'object-cover'
+                        }`}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-500 gap-2">
+                        <Package size={48} />
+                        <span className="text-xs font-black uppercase tracking-widest">{selectedProduct.unidad}</span>
+                      </div>
+                    )}
+
+                    {/* Top Controls: Close, Fit Toggle, Fullscreen Lightbox */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
+                      {/* Fit Mode Toggle */}
+                      {currentModalImg && (
+                        <button
+                          type="button"
+                          onClick={() => setModalFitMode(prev => prev === 'contain' ? 'cover' : 'contain')}
+                          title={modalFitMode === 'contain' ? 'Llenar pantalla' : 'Ver imagen completa sin cortes'}
+                          className="px-2.5 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white text-[10px] font-bold backdrop-blur-md flex items-center gap-1 shadow-md transition-all cursor-pointer"
+                        >
+                          {modalFitMode === 'contain' ? (
+                            <>
+                              <Maximize2 size={13} />
+                              <span className="hidden sm:inline">Completa</span>
+                            </>
+                          ) : (
+                            <>
+                              <Minimize2 size={13} />
+                              <span className="hidden sm:inline">Llenar</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {/* Lightbox / Zoom Button */}
+                      {currentModalImg && (
+                        <button
+                          type="button"
+                          onClick={() => setIsLightboxOpen(true)}
+                          title="Abrir visor a pantalla completa"
+                          className="w-8 h-8 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center backdrop-blur-md shadow-md transition-all cursor-pointer"
+                        >
+                          <Maximize2 size={15} />
+                        </button>
+                      )}
+
+                      {/* Close button */}
+                      <button
+                        onClick={() => setSelectedProduct(null)}
+                        className="w-8 h-8 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-slate-900 transition-all shadow-md backdrop-blur-md cursor-pointer"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Navigation Arrows */}
+                    {hasMultiple && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setModalActiveImageIndex(prev => (prev - 1 + modalImages.length) % modalImages.length)}
+                          title="Foto anterior"
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center backdrop-blur-md shadow-lg transition-transform active:scale-95 z-20 cursor-pointer"
+                        >
+                          <ChevronLeft size={20} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setModalActiveImageIndex(prev => (prev + 1) % modalImages.length)}
+                          title="Foto siguiente"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center backdrop-blur-md shadow-lg transition-transform active:scale-95 z-20 cursor-pointer"
+                        >
+                          <ChevronRight size={20} />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Department and Origin Badges */}
+                    <div className="absolute bottom-3 left-4 flex items-center gap-1.5 z-20">
+                      <span className={`px-2.5 py-0.5 rounded-lg text-white text-[10px] font-black uppercase shadow-xs ${
+                        (selectedProduct.departamento || getItemDepartamento(selectedProduct)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
+                      }`}>
+                        {(selectedProduct.departamento || getItemDepartamento(selectedProduct)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-lg bg-slate-900/90 backdrop-blur-md text-white text-[10px] font-black uppercase">
+                        {selectedProduct.proveedor || 'General'}
+                      </span>
+                      {hasMultiple && (
+                        <span className="px-2 py-0.5 rounded-lg bg-amber-500 text-slate-950 text-[10px] font-black uppercase shadow-xs font-mono">
+                          {modalActiveImageIndex + 1} / {modalImages.length}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Thumbnail Strip if Multiple Images */}
+                  {hasMultiple && (
+                    <div className="flex items-center gap-2 p-2 bg-slate-950/90 overflow-x-auto scrollbar-thin">
+                      {modalImages.map((thumbUrl, tIdx) => (
+                        <button
+                          key={tIdx}
+                          type="button"
+                          onClick={() => setModalActiveImageIndex(tIdx)}
+                          className={`relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer ${
+                            modalActiveImageIndex === tIdx 
+                              ? 'border-emerald-400 ring-2 ring-emerald-400/40 scale-105 shadow-sm' 
+                              : 'border-slate-800 opacity-60 hover:opacity-100 hover:border-slate-600'
+                          }`}
+                        >
+                          <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                          <span className="absolute bottom-0 right-0 px-1 text-[8px] font-black bg-black/80 text-white rounded-tl">
+                            {tIdx + 1}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-900/70 text-white flex items-center justify-center hover:bg-slate-900 transition-all shadow-md"
-              >
-                <X size={18} />
-              </button>
-
-              <div className="absolute bottom-3 left-4 flex items-center gap-1.5">
-                <span className={`px-3 py-1 rounded-xl text-white text-xs font-black uppercase ${
-                  (selectedProduct.departamento || getItemDepartamento(selectedProduct)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
-                }`}>
-                  {(selectedProduct.departamento || getItemDepartamento(selectedProduct)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
-                </span>
-                <span className="px-3 py-1 rounded-xl bg-slate-900/90 backdrop-blur-md text-white text-xs font-black uppercase">
-                  {selectedProduct.proveedor || 'General'}
-                </span>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* Modal Body Info */}
             <div className="p-6 overflow-y-auto space-y-4">
@@ -1139,6 +1263,14 @@ export default function CatalogoPublico() {
           </div>
         </div>
       )}
+
+      {/* FULLSCREEN LIGHTBOX MODAL */}
+      <ProductImageViewerModal
+        isOpen={isLightboxOpen}
+        item={selectedProduct}
+        initialIndex={modalActiveImageIndex}
+        onClose={() => setIsLightboxOpen(false)}
+      />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-10 px-4 sm:px-6 text-center text-xs text-slate-500 mt-auto">

@@ -266,9 +266,23 @@ export interface StockItem {
   peso?: number; // Para bultos pesados o lotes (Opcional)
   promocion?: boolean;
   imagenUrl?: string;
+  imagenes?: string[]; // Soporte para múltiples fotos por producto
   especificaciones?: string;
   comision?: number; // Custom commission value per product
 }
+
+/** Obtiene la lista completa de fotos del producto de forma retrocompatible */
+export const getItemImages = (item: { imagenUrl?: string; imagenes?: string[] } | null | undefined): string[] => {
+  if (!item) return [];
+  if (Array.isArray(item.imagenes) && item.imagenes.length > 0) {
+    const valid = item.imagenes.filter(img => typeof img === 'string' && img.trim().length > 0);
+    if (valid.length > 0) return valid;
+  }
+  if (item.imagenUrl && typeof item.imagenUrl === 'string' && item.imagenUrl.trim().length > 0) {
+    return [item.imagenUrl.trim()];
+  }
+  return [];
+};
 
 export interface Sale {
   id: string;
