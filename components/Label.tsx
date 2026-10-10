@@ -6,6 +6,8 @@ interface LabelProps {
   stock: any[];
   item?: { codigoFardo: string; cantidad: number };
   format?: LabelFormat;
+  bultoIndex?: number;
+  totalBultos?: number;
 }
 
 // Formateador limpio de teléfono para máxima legibilidad de transportistas
@@ -53,7 +55,7 @@ const BarcodePattern = ({ code }: { code: string }) => {
   );
 };
 
-export const Label = ({ sale, stock, item, format }: LabelProps) => {
+export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: LabelProps) => {
   const activeFormat: LabelFormat = format || (typeof window !== 'undefined' ? (localStorage.getItem('preferred_label_format') as LabelFormat) : null) || 'logistica';
   const displayItem = item || { codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 };
   const stockItem = stock.find(i => i.codigo === displayItem.codigoFardo);
@@ -64,6 +66,8 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
   const dispatchType = sale.tipoDespacho ? sale.tipoDespacho.toUpperCase() : 'DOMICILIO';
   const formattedRut = cleanRut(sale.rut);
   const formattedPhone = cleanPhone(sale.telefono);
+  const hasMultipleBultos = Boolean(totalBultos && totalBultos > 1);
+  const bultoLabelText = hasMultipleBultos ? `BULTO ${bultoIndex || 1} DE ${totalBultos}` : null;
 
   // FORMATO 1: CUADRÍCULA LOGÍSTICA PRO (Máxima legibilidad, recuadros marcados, RUT y Teléfono gigantes)
   if (activeFormat === 'logistica') {
@@ -113,18 +117,34 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
             <span className="font-mono text-3xl font-black tracking-tight text-black leading-none">
               #{sale.numeroVenta}
             </span>
-            <span 
-              className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded mt-1 border border-black"
-              style={{
-                backgroundColor: '#000000',
-                color: '#ffffff',
-                WebkitPrintColorAdjust: 'exact',
-                printColorAdjust: 'exact',
-                boxShadow: 'inset 0 0 0 1000px #000000'
-              }}
-            >
-              {sale.tipoVenta || 'NORMAL'}
-            </span>
+            <div className="flex items-center gap-1 mt-1">
+              <span 
+                className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded border border-black"
+                style={{
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                  boxShadow: 'inset 0 0 0 1000px #000000'
+                }}
+              >
+                {sale.tipoVenta || 'NORMAL'}
+              </span>
+              {hasMultipleBultos && (
+                <span 
+                  className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded border border-black font-mono tracking-tight"
+                  style={{
+                    backgroundColor: '#000000',
+                    color: '#ffffff',
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact',
+                    boxShadow: 'inset 0 0 0 1000px #000000'
+                  }}
+                >
+                  {bultoLabelText}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -287,15 +307,31 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
           </div>
 
           <div className="p-1.5 text-center flex flex-col items-center justify-center bg-slate-50">
-            <span className="text-[8px] font-black uppercase tracking-wider text-slate-600 leading-none">
-              CANTIDAD
-            </span>
-            <span className="text-2xl font-mono font-black text-black leading-none mt-1">
-              x{quantity}
-            </span>
-            <span className="text-[9px] font-black uppercase text-slate-800 mt-0.5">
-              {quantity > 1 ? 'BULTOS' : 'BULTO'}
-            </span>
+            {hasMultipleBultos ? (
+              <>
+                <span className="text-[7.5px] font-black uppercase tracking-wider text-black leading-none bg-slate-200 border border-black px-1 py-0.5 rounded">
+                  NUMERACIÓN
+                </span>
+                <span className="text-xl sm:text-2xl font-mono font-black text-black leading-none mt-1">
+                  {bultoIndex || 1} DE {totalBultos}
+                </span>
+                <span className="text-[8.5px] font-black uppercase text-slate-800 mt-0.5">
+                  ({quantity} {quantity > 1 ? 'UNIDADES' : 'UNIDAD'})
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[8px] font-black uppercase tracking-wider text-slate-600 leading-none">
+                  CANTIDAD
+                </span>
+                <span className="text-2xl font-mono font-black text-black leading-none mt-1">
+                  x{quantity}
+                </span>
+                <span className="text-[9px] font-black uppercase text-slate-800 mt-0.5">
+                  {quantity > 1 ? 'BULTOS' : 'BULTO'}
+                </span>
+              </>
+            )}
             {stockItem?.peso && (
               <span 
                 className="text-[8px] font-black text-white bg-black px-1.5 py-0.5 rounded mt-0.5 border border-black"
@@ -394,6 +430,19 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
           >
             <span className="text-[8px] font-bold uppercase tracking-widest block text-slate-300">ORDEN</span>
             <span className="font-mono text-2xl font-black leading-none">#{sale.numeroVenta}</span>
+            {hasMultipleBultos && (
+              <span 
+                className="bg-white text-black font-mono font-black text-[9px] px-1.5 py-0.5 rounded border border-black uppercase mt-1 block tracking-tight"
+                style={{
+                  backgroundColor: '#ffffff',
+                  color: '#000000',
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact'
+                }}
+              >
+                {bultoLabelText}
+              </span>
+            )}
           </div>
         </div>
 
@@ -503,11 +552,25 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
             <p className="text-sm font-black uppercase text-black">{productName}</p>
             <p className="text-[10px] font-mono font-black text-black mt-0.5">SKU: {productCode}</p>
           </div>
-          <div className="p-2 text-center bg-slate-100 flex flex-col justify-center">
-            <span className="text-[8px] font-black uppercase text-slate-600">CANTIDAD</span>
-            <p className="text-3xl font-mono font-black text-black leading-none">x{quantity}</p>
-            <span className="text-[8px] font-black uppercase text-slate-700">BULTO(S)</span>
-          </div>
+          {hasMultipleBultos ? (
+            <div className="p-1.5 text-center bg-slate-100 flex flex-col justify-center">
+              <span className="text-[8px] font-black uppercase text-black bg-slate-200 border border-black px-1 py-0.5 rounded leading-none">
+                NUMERACIÓN
+              </span>
+              <p className="text-xl sm:text-2xl font-mono font-black text-black leading-none mt-1">
+                {bultoIndex || 1} DE {totalBultos}
+              </p>
+              <span className="text-[8px] font-black uppercase text-slate-800 mt-0.5">
+                ({quantity} {quantity > 1 ? 'UNIDADES' : 'UNIDAD'})
+              </span>
+            </div>
+          ) : (
+            <div className="p-2 text-center bg-slate-100 flex flex-col justify-center">
+              <span className="text-[8px] font-black uppercase text-slate-600">CANTIDAD</span>
+              <p className="text-3xl font-mono font-black text-black leading-none">x{quantity}</p>
+              <span className="text-[8px] font-black uppercase text-slate-700">BULTO(S)</span>
+            </div>
+          )}
         </div>
 
         {/* Video Advertencia */}
@@ -561,6 +624,11 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
         <div className="text-right">
           <span className="font-mono text-2xl font-black text-black leading-none">#{sale.numeroVenta}</span>
           <p className="text-[9px] font-bold text-slate-600 uppercase">{sale.tipoVenta || 'NORMAL'}</p>
+          {hasMultipleBultos && (
+            <span className="text-[9px] font-black uppercase bg-black text-white px-2 py-0.5 rounded font-mono inline-block mt-0.5">
+              {bultoLabelText}
+            </span>
+          )}
         </div>
       </div>
 
@@ -606,8 +674,15 @@ export const Label = ({ sale, stock, item, format }: LabelProps) => {
           <span className="text-[9px] font-mono font-bold text-slate-700">SKU: {productCode}</span>
         </div>
         <div className="text-right">
-          <span className="text-[8px] font-black uppercase text-slate-500 block">CANTIDAD</span>
-          <span className="text-xl font-black text-black">x{quantity}</span>
+          <span className="text-[8px] font-black uppercase text-slate-500 block">
+            {hasMultipleBultos ? 'NUMERACIÓN' : 'CANTIDAD'}
+          </span>
+          <span className="text-base sm:text-lg font-mono font-black text-black">
+            {hasMultipleBultos ? `${bultoIndex || 1} DE ${totalBultos}` : `x${quantity}`}
+          </span>
+          {hasMultipleBultos && (
+            <span className="block text-[8px] font-bold text-slate-600">({quantity} un.)</span>
+          )}
         </div>
       </div>
 

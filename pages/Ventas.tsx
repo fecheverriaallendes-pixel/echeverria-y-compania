@@ -76,7 +76,12 @@ export default function Ventas() {
 
   // Print spooler state
   const [activePrintType, setActivePrintType] = useState<'FACTURA' | 'ETIQUETAS' | null>(null);
-  const [labelsToPrint, setLabelsToPrint] = useState<{ sale: Sale; item: { codigoFardo: string; cantidad: number } }[]>([]);
+  const [labelsToPrint, setLabelsToPrint] = useState<{ 
+    sale: Sale; 
+    item: { codigoFardo: string; cantidad: number }; 
+    bultoIndex: number; 
+    totalBultos: number; 
+  }[]>([]);
   const [invoicesToPrint, setInvoicesToPrint] = useState<Sale[]>([]);
   const affectedSalesRef = useRef<Sale[]>([]);
   const [printSuccessBanner, setPrintSuccessBanner] = useState<string | null>(null);
@@ -85,6 +90,7 @@ export default function Ventas() {
   const [multiProductModalSale, setMultiProductModalSale] = useState<Sale | null>(null);
   const [selectedMultiItemIndices, setSelectedMultiItemIndices] = useState<number[]>([]);
   const [multiItemMultiplier, setMultiItemMultiplier] = useState<'by_product' | 'by_unit'>('by_product');
+  const [customTotalBultos, setCustomTotalBultos] = useState<number>(0);
 
   // Modal for Invoice / Nota de Venta Preview
   const [invoiceModalSale, setInvoiceModalSale] = useState<Sale | null>(null);
@@ -166,7 +172,12 @@ export default function Ventas() {
 
   // Printing execution handlers
   const executePrintLabels = (
-    queue: { sale: Sale; item: { codigoFardo: string; cantidad: number } }[],
+    queue: { 
+      sale: Sale; 
+      item: { codigoFardo: string; cantidad: number }; 
+      bultoIndex: number; 
+      totalBultos: number; 
+    }[],
     salesToUpdate: Sale[]
   ) => {
     if (queue.length === 0) return;
@@ -238,18 +249,24 @@ export default function Ventas() {
       ? sale.items 
       : [{ codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 }];
 
-    if (items.length > 1) {
-      // Multiple products: open simultaneous product label selection modal
+    if (items.length > 1 || (items[0] && items[0].cantidad > 1)) {
+      // Multiple products or multi-unit: open simultaneous product label selection modal with enumeration
       setMultiProductModalSale(sale);
       setSelectedMultiItemIndices(items.map((_, i) => i));
       setMultiItemMultiplier('by_product');
+      setCustomTotalBultos(items.length);
     } else {
-      // Single product: print directly
-      executePrintLabels([{ sale, item: items[0] }], [sale]);
+      // Single product and 1 unit: print directly
+      executePrintLabels([{ 
+        sale, 
+        item: items[0], 
+        bultoIndex: 1, 
+        totalBultos: 1 
+      }], [sale]);
     }
   };
 
-  // Multi-product modal confirmation
+  // Multi-product modal confirmation with guaranteed sequential numbering
   const handleConfirmMultiProductPrint = () => {
     if (!multiProductModalSale) return;
     const sale = multiProductModalSale;
@@ -257,28 +274,52 @@ export default function Ventas() {
       ? sale.items 
       : [{ codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 }];
 
-    const queue: { sale: Sale; item: { codigoFardo: string; cantidad: number } }[] = [];
+    const queue: { 
+      sale: Sale; 
+      item: { codigoFardo: string; cantidad: number }; 
+      bultoIndex: number; 
+      totalBultos: number; 
+    }[] = [];
 
-    selectedMultiItemIndices.forEach(idx => {
-      const it = items[idx];
-      if (!it) return;
+    const selectedItems = selectedMultiItemIndices
+      .map(idx => items[idx])
+      .filter(Boolean);
 
-      if (multiItemMultiplier === 'by_unit' && (it.cantidad || 1) > 1) {
-        // Multiple physical units: generate 1 label per unit
-        for (let u = 0; u < (it.cantidad || 1); u++) {
-          queue.push({
-            sale,
-            item: { codigoFardo: it.codigoFardo, cantidad: 1 }
-          });
-        }
-      } else {
-        // 1 label for the product line item
+    if (selectedItems.length === 0) return;
+
+    if (multiItemMultiplier === 'by_product') {
+      const totalCount = selectedItems.length;
+      const effectiveTotal = customTotalBultos > 0 ? customTotalBultos : totalCount;
+
+      selectedItems.forEach((it, idx) => {
         queue.push({
           sale,
-          item: { codigoFardo: it.codigoFardo, cantidad: it.cantidad || 1 }
+          item: { codigoFardo: it.codigoFardo, cantidad: it.cantidad || 1 },
+          bultoIndex: idx + 1,
+          totalBultos: effectiveTotal
         });
-      }
-    });
+      });
+    } else {
+      // Multiplicar por unidad física: 1 etiqueta por cada unidad individual
+      let totalUnits = 0;
+      selectedItems.forEach(it => {
+        totalUnits += (it.cantidad || 1);
+      });
+      const effectiveTotal = customTotalBultos > 0 ? customTotalBultos : totalUnits;
+
+      let bultoCounter = 1;
+      selectedItems.forEach(it => {
+        const qty = it.cantidad || 1;
+        for (let u = 0; u < qty; u++) {
+          queue.push({
+            sale,
+            item: { codigoFardo: it.codigoFardo, cantidad: 1 },
+            bultoIndex: bultoCounter++,
+            totalBultos: effectiveTotal
+          });
+        }
+      });
+    }
 
     setMultiProductModalSale(null);
     executePrintLabels(queue, [sale]);
@@ -289,17 +330,24 @@ export default function Ventas() {
     const targetSales = filteredSales.filter(s => selectedSaleIds.includes(s.id));
     if (targetSales.length === 0) return;
 
-    const queue: { sale: Sale; item: { codigoFardo: string; cantidad: number } }[] = [];
+    const queue: { 
+      sale: Sale; 
+      item: { codigoFardo: string; cantidad: number }; 
+      bultoIndex: number; 
+      totalBultos: number; 
+    }[] = [];
 
     targetSales.forEach(sale => {
       const items = sale.items && sale.items.length > 0 
         ? sale.items 
         : [{ codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 }];
 
-      items.forEach(it => {
+      items.forEach((it, idx) => {
         queue.push({
           sale,
-          item: { codigoFardo: it.codigoFardo, cantidad: it.cantidad || 1 }
+          item: { codigoFardo: it.codigoFardo, cantidad: it.cantidad || 1 },
+          bultoIndex: idx + 1,
+          totalBultos: items.length
         });
       });
     });
@@ -382,6 +430,8 @@ export default function Ventas() {
                   stock={stock} 
                   item={itemObj.item} 
                   format={labelFormat} 
+                  bultoIndex={itemObj.bultoIndex}
+                  totalBultos={itemObj.totalBultos}
                 />
               </div>
             ))}
@@ -840,163 +890,278 @@ export default function Ventas() {
       </div>
 
       {/* MODAL: IMPRESIÓN DE ETIQUETAS POR PRODUCTOS SIMULTÁNEOS (NOTAS DE VENTA) */}
-      {multiProductModalSale && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 no-print animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-6">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <Printer size={20} />
-                </div>
-                <div>
-                  <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">
-                    Impresión de Etiquetas Simultáneas
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Nota de Venta #{multiProductModalSale.numeroVenta} • {multiProductModalSale.cliente}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setMultiProductModalSale(null)} className="p-1.5 text-slate-400 hover:text-slate-700 rounded-xl">
-                <X size={20} />
-              </button>
-            </div>
+      {multiProductModalSale && (() => {
+        const saleItems = multiProductModalSale.items && multiProductModalSale.items.length > 0 
+          ? multiProductModalSale.items 
+          : [{ codigoFardo: multiProductModalSale.codigoFardo || 'N/A', cantidad: multiProductModalSale.cantidad || 1 }];
 
-            {/* Opciones de Multiplicación de Etiquetas */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
-                Modo de Generación:
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMultiItemMultiplier('by_product')}
-                  className={`p-3 rounded-2xl border-2 text-left font-black text-xs uppercase transition-all flex flex-col justify-between gap-1 ${
-                    multiItemMultiplier === 'by_product'
-                      ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 ring-2 ring-emerald-500/20'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>1 Etiqueta por Producto</span>
-                  <span className="text-[10px] font-normal text-slate-500">1 rótulo por cada ítem de la lista</span>
-                </button>
+        const selectedItems = selectedMultiItemIndices.map(idx => saleItems[idx]).filter(Boolean);
+        const totalUnits = selectedItems.reduce((acc, it) => acc + (it.cantidad || 1), 0);
+        const calculatedLabelsCount = multiItemMultiplier === 'by_product' ? selectedItems.length : totalUnits;
+        const effectiveTotalBultos = customTotalBultos > 0 ? customTotalBultos : calculatedLabelsCount;
 
-                <button
-                  type="button"
-                  onClick={() => setMultiItemMultiplier('by_unit')}
-                  className={`p-3 rounded-2xl border-2 text-left font-black text-xs uppercase transition-all flex flex-col justify-between gap-1 ${
-                    multiItemMultiplier === 'by_unit'
-                      ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 ring-2 ring-emerald-500/20'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <span>1 Etiqueta por Unidad/Bulto</span>
-                  <span className="text-[10px] font-normal text-slate-500">Multiplicar por la cantidad física</span>
+        return (
+          <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 no-print animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                    <Printer size={22} />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 uppercase tracking-tight">
+                      Etiquetas Simultáneas Enumeradas
+                    </h3>
+                    <p className="text-xs text-slate-500 font-semibold">
+                      Nota de Venta #{multiProductModalSale.numeroVenta} • <strong className="text-slate-800">{multiProductModalSale.cliente}</strong>
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setMultiProductModalSale(null)} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors">
+                  <X size={20} />
                 </button>
               </div>
-            </div>
 
-            {/* Formato Térmico */}
-            <div className="flex items-center justify-between text-xs bg-slate-50 p-3 rounded-2xl border border-slate-200">
-              <span className="font-bold text-slate-600 uppercase">Formato Térmico:</span>
-              <div className="flex gap-1">
-                {(['logistica', 'industrial', 'clasica'] as LabelFormat[]).map(fmt => (
+              {/* Modo de rotulado */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                  1. Modo de Generación y Rotulado:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <button
-                    key={fmt}
-                    onClick={() => handleFormatChange(fmt)}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${
-                      labelFormat === fmt ? 'bg-slate-900 text-white' : 'bg-white border text-slate-600'
+                    type="button"
+                    onClick={() => {
+                      setMultiItemMultiplier('by_product');
+                      setCustomTotalBultos(selectedMultiItemIndices.length);
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left font-black text-xs uppercase transition-all flex flex-col justify-between gap-1 cursor-pointer ${
+                      multiItemMultiplier === 'by_product'
+                        ? 'border-emerald-500 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     }`}
                   >
-                    {fmt === 'logistica' ? 'Logística (100x150)' : fmt === 'industrial' ? 'Industrial' : 'Clásica'}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">1 Etiqueta por Producto</span>
+                      {multiItemMultiplier === 'by_product' && <CheckCircle2 size={16} className="text-emerald-600" />}
+                    </div>
+                    <span className="text-[10.5px] font-medium text-slate-500 lowercase first-letter:uppercase">
+                      Cada producto lleva su etiqueta con número correlativo (Bulto 1 de N, 2 de N...)
+                    </span>
                   </button>
-                ))}
-              </div>
-            </div>
 
-            {/* Lista de Productos con Checkbox */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-black uppercase text-slate-500">
-                <span>Seleccionar productos a rotular:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMultiItemMultiplier('by_unit');
+                      setCustomTotalBultos(totalUnits);
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left font-black text-xs uppercase transition-all flex flex-col justify-between gap-1 cursor-pointer ${
+                      multiItemMultiplier === 'by_unit'
+                        ? 'border-emerald-500 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">1 Etiqueta por Unidad Física</span>
+                      {multiItemMultiplier === 'by_unit' && <CheckCircle2 size={16} className="text-emerald-600" />}
+                    </div>
+                    <span className="text-[10.5px] font-medium text-slate-500 lowercase first-letter:uppercase">
+                      Multiplica según la cantidad de cada producto, enumeradas correlativamente
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Ajuste de Total de Bultos & Formato Térmico */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase text-slate-600 tracking-wider">
+                      Total de Bultos ({effectiveTotalBultos}):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCustomTotalBultos(calculatedLabelsCount)}
+                      className="text-[9px] font-black text-emerald-600 uppercase hover:underline"
+                    >
+                      Restablecer ({calculatedLabelsCount})
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    value={effectiveTotalBultos}
+                    onChange={(e) => setCustomTotalBultos(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono font-black text-xs text-slate-900"
+                    placeholder="Total de bultos"
+                  />
+                  <span className="text-[9px] text-slate-400 block">
+                    Las etiquetas se imprimirán como: Bulto 1 de {effectiveTotalBultos}, 2 de {effectiveTotalBultos}...
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-600 tracking-wider block">
+                    Formato Térmico:
+                  </label>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(['logistica', 'industrial', 'clasica'] as LabelFormat[]).map(fmt => (
+                      <button
+                        key={fmt}
+                        type="button"
+                        onClick={() => handleFormatChange(fmt)}
+                        className={`py-2 px-1 rounded-xl text-[10px] font-black uppercase transition-all text-center ${
+                          labelFormat === fmt ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {fmt === 'logistica' ? 'Logística' : fmt === 'industrial' ? 'Industrial' : 'Clásica'}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[9px] text-slate-400 block">
+                    Tamaño oficial estándar 100 x 150 mm
+                  </span>
+                </div>
+              </div>
+
+              {/* Lista de Productos con Asignación de Bulto en Vivo */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-black uppercase text-slate-500">
+                  <span>Productos de la Nota de Venta y su Numeración:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedMultiItemIndices.length === saleItems.length) {
+                        setSelectedMultiItemIndices([]);
+                      } else {
+                        setSelectedMultiItemIndices(Array.from({ length: saleItems.length }, (_, i) => i));
+                      }
+                    }}
+                    className="text-emerald-600 hover:underline text-[11px] font-bold"
+                  >
+                    {selectedMultiItemIndices.length === saleItems.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                  </button>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {(() => {
+                    let bultoTracker = 1;
+                    return saleItems.map((item, idx) => {
+                      const isChecked = selectedMultiItemIndices.includes(idx);
+                      const stockItem = stock.find(s => s.codigo?.trim().toUpperCase() === item.codigoFardo?.trim().toUpperCase());
+                      const productName = stockItem ? stockItem.tipo : item.codigoFardo;
+                      
+                      const itemBultoStart = bultoTracker;
+                      const itemUnits = item.cantidad || 1;
+                      if (isChecked) {
+                        if (multiItemMultiplier === 'by_product') {
+                          bultoTracker += 1;
+                        } else {
+                          bultoTracker += itemUnits;
+                        }
+                      }
+                      const itemBultoEnd = bultoTracker - 1;
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => {
+                            setSelectedMultiItemIndices(prev => 
+                              prev.includes(idx) ? prev.filter(x => x !== idx) : [...prev, idx]
+                            );
+                          }}
+                          className={`p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                            isChecked 
+                              ? 'border-emerald-500 bg-emerald-50/40 text-slate-900 shadow-xs' 
+                              : 'border-slate-200 bg-slate-50/60 text-slate-400 opacity-60'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {isChecked ? (
+                              <CheckSquare size={20} className="text-emerald-600 flex-shrink-0" />
+                            ) : (
+                              <Square size={20} className="text-slate-400 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="font-black text-xs uppercase leading-tight truncate">{productName}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-mono text-slate-500">SKU: {item.codigoFardo}</span>
+                                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/80 px-1.5 py-0.2 rounded">
+                                  Cant: {item.cantidad} un.
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-right flex-shrink-0">
+                            {isChecked ? (
+                              <div className="flex flex-col items-end">
+                                <span className="px-2.5 py-1 bg-black text-white rounded-lg text-[10px] font-mono font-black uppercase tracking-tight shadow-xs">
+                                  {multiItemMultiplier === 'by_product' || itemUnits === 1
+                                    ? `BULTO ${itemBultoStart} DE ${effectiveTotalBultos}`
+                                    : `BULTOS ${itemBultoStart} a ${itemBultoEnd} DE ${effectiveTotalBultos}`
+                                  }
+                                </span>
+                                <span className="text-[9px] font-bold text-emerald-700 mt-0.5">
+                                  {multiItemMultiplier === 'by_product' ? '1 etiqueta' : `${itemUnits} etiquetas`}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-slate-200 text-slate-500 rounded text-[9px] font-bold uppercase">
+                                No rotular
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Resumen Final de Impresión */}
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-xs flex-shrink-0">
+                    {calculatedLabelsCount}
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase text-emerald-950">
+                      Total: {calculatedLabelsCount} etiqueta(s) enumeradas correlativamente
+                    </p>
+                    <p className="text-[10.5px] text-emerald-800">
+                      Desde <strong className="font-mono">Bulto 1 de {effectiveTotalBultos}</strong> hasta <strong className="font-mono">Bulto {calculatedLabelsCount} de {effectiveTotalBultos}</strong>
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-white px-2.5 py-1 rounded-lg border border-emerald-300">
+                  100x150 mm
+                </span>
+              </div>
+
+              {/* Acciones del Modal */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
-                  onClick={() => {
-                    const totalItems = multiProductModalSale.items?.length || 1;
-                    if (selectedMultiItemIndices.length === totalItems) {
-                      setSelectedMultiItemIndices([]);
-                    } else {
-                      setSelectedMultiItemIndices(Array.from({ length: totalItems }, (_, i) => i));
-                    }
-                  }}
-                  className="text-emerald-600 hover:underline text-[11px]"
+                  type="button"
+                  onClick={() => setMultiProductModalSale(null)}
+                  className="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-2xl text-xs font-black uppercase tracking-wider transition-colors cursor-pointer"
                 >
-                  {selectedMultiItemIndices.length === (multiProductModalSale.items?.length || 1) ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedMultiItemIndices.length === 0}
+                  onClick={handleConfirmMultiProductPrint}
+                  className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Printer size={16} />
+                  <span>Imprimir {calculatedLabelsCount} Etiquetas Enumeradas</span>
                 </button>
               </div>
-
-              <div className="max-h-56 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {(multiProductModalSale.items && multiProductModalSale.items.length > 0 
-                  ? multiProductModalSale.items 
-                  : [{ codigoFardo: multiProductModalSale.codigoFardo || 'N/A', cantidad: multiProductModalSale.cantidad || 1 }]
-                ).map((item, idx) => {
-                  const isChecked = selectedMultiItemIndices.includes(idx);
-                  const stockItem = stock.find(s => s.codigo?.trim().toUpperCase() === item.codigoFardo?.trim().toUpperCase());
-                  const productName = stockItem ? stockItem.tipo : item.codigoFardo;
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setSelectedMultiItemIndices(prev => 
-                          prev.includes(idx) ? prev.filter(x => x !== idx) : [...prev, idx]
-                        );
-                      }}
-                      className={`p-3 rounded-2xl border-2 flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                        isChecked 
-                          ? 'border-emerald-500 bg-emerald-50/40 text-slate-900' 
-                          : 'border-slate-200 bg-slate-50 text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {isChecked ? <CheckSquare size={18} className="text-emerald-600 flex-shrink-0" /> : <Square size={18} className="text-slate-400 flex-shrink-0" />}
-                        <div>
-                          <p className="font-black text-xs uppercase leading-tight">{productName}</p>
-                          <span className="text-[10px] font-mono text-slate-400">SKU: {item.codigoFardo}</span>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="px-2 py-0.5 bg-slate-900 text-white rounded text-[10px] font-black uppercase">
-                          Cant: {item.cantidad}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Acciones del Modal */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setMultiProductModalSale(null)}
-                className="px-5 py-3 text-slate-600 hover:bg-slate-100 rounded-2xl text-xs font-black uppercase tracking-wider transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={selectedMultiItemIndices.length === 0}
-                onClick={handleConfirmMultiProductPrint}
-                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-600/20 active:scale-95 transition-all"
-              >
-                <Printer size={16} />
-                <span>Imprimir Etiquetas Seleccionadas</span>
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: PREVISUALIZACIÓN DE FACTURA / NOTA DE VENTA */}
       {invoiceModalSale && (

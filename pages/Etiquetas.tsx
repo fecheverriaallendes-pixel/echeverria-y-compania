@@ -606,16 +606,24 @@ export default function Etiquetas() {
 
       {/* PRINT CONTAINER FOR THERMAL PRINTER (100x150 mm multiple pages) */}
       <div id="thermal-labels-print-area" className="hidden print-only">
-        {salesToPrint.map((sale) => (
-          (sale.items && sale.items.length > 0 
+        {salesToPrint.map((sale) => {
+          const itemsList = (sale.items && sale.items.length > 0 
             ? sale.items 
             : [{ codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 }]
-          ).map((item, idx) => (
+          );
+          return itemsList.map((item, idx) => (
             <div key={`${sale.id}-${idx}`} className="label-container">
-              <Label sale={sale} stock={stock} item={item} format={labelFormat} />
+              <Label 
+                sale={sale} 
+                stock={stock} 
+                item={item} 
+                format={labelFormat}
+                bultoIndex={idx + 1}
+                totalBultos={itemsList.length}
+              />
             </div>
-          ))
-        ))}
+          ));
+        })}
       </div>
 
       {/* QUEUE PREVIEW MODAL (INTERACTIVE FULL RESOLUTION VIEWER) */}
