@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
-import { Sale, SaleItem, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig, getItemDepartamento, DepartamentoGiro } from '../types';
+import { Sale, SaleItem, StockItem, SaleStatus, SaleType, StaffMember, StaffRole, Purchase, PurchaseType, Abono, DispatchType, DispatchStatus, CommissionAdjustment, Customer, Coupon, Cheque, ProductionRecord, CommissionType, COMMISSION_VALUES, StockHistoryEvent, RatesConfig, getItemDepartamento, DepartamentoGiro, PartnerSettlement } from '../types';
 import { db, storage } from '../firebase';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs, addDoc, query, where, orderBy, increment } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -474,6 +474,10 @@ interface StoreContextType {
   stockLoaded: boolean;
   seedSampleBeautyProducts: () => Promise<number>;
   setProductDepartment: (id: string, departamento: DepartamentoGiro, subcategoria?: string) => Promise<void>;
+  partnerSettlements: PartnerSettlement[];
+  addPartnerSettlement: (settlement: Omit<PartnerSettlement, 'id'>) => Promise<string>;
+  deletePartnerSettlement: (id: string) => Promise<void>;
+  updatePartnerSettlement: (id: string, partial: Partial<PartnerSettlement>) => Promise<void>;
 }
 
 // Safe storage wrapper to prevent Safari private mode exception crashes
@@ -634,6 +638,10 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
   const [productionRecords, setProductionRecords] = useState<ProductionRecord[]>([]);
   const [stockHistory, setStockHistory] = useState<StockHistoryEvent[]>(() => {
     const saved = safeLocalStorage.getItem('mdf_stock_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [partnerSettlements, setPartnerSettlements] = useState<PartnerSettlement[]>(() => {
+    const saved = safeLocalStorage.getItem('mdf_partner_settlements');
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -829,6 +837,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     let unsubCustomers: any;
     let unsubStockHistory: any;
     let unsubRates: any;
+    let unsubPartnerSettlements: any;
 
     const initFirebase = async () => {
       try {
@@ -892,6 +901,11 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
         unsubStockHistory = onSnapshot(collection(db, 'stock_history'), (snap) => {
           setStockHistory(snap.docs.map(d => d.data() as StockHistoryEvent));
         });
+        unsubPartnerSettlements = onSnapshot(collection(db, 'partner_settlements'), (snap) => {
+          setPartnerSettlements(snap.docs.map(d => ({ ...d.data(), id: d.id } as PartnerSettlement)));
+        }, (error) => {
+          console.warn("Error streaming partner settlements:", error);
+        });
       } catch (error: any) {
         console.error("Error inicializando Firebase:", error.code, error.message);
       }
@@ -912,6 +926,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       if (unsubCustomers) unsubCustomers();
       if (unsubStockHistory) unsubStockHistory();
       if (unsubRates) unsubRates();
+      if (unsubPartnerSettlements) unsubPartnerSettlements();
     };
   }, []);
 
@@ -925,7 +940,8 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     safeLocalStorage.setItem('mdf_settings', JSON.stringify(settings));
     safeLocalStorage.setItem('mdf_stock_history', JSON.stringify(stockHistory));
     safeLocalStorage.setItem('mdf_rates', JSON.stringify(rates));
-  }, [sales, stock, staff, purchases, carriers, adjustments, settings, stockHistory, rates]);
+    safeLocalStorage.setItem('mdf_partner_settlements', JSON.stringify(partnerSettlements));
+  }, [sales, stock, staff, purchases, carriers, adjustments, settings, stockHistory, rates, partnerSettlements]);
 
   const [currentUser, setCurrentUser] = useState<{ nombre: string; rol: StaffRole } | null>(() => {
     const saved = safeSessionStorage.getItem('mdf_session');
@@ -2186,6 +2202,42 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     });
   };
 
+  const addPartnerSettlement = async (settlement: Omit<PartnerSettlement, 'id'>): Promise<string> => {
+    try {
+      const newId = Math.random().toString(36).substr(2, 9);
+      const data: PartnerSettlement = {
+        ...settlement,
+        id: newId
+      };
+      await setDoc(doc(db, 'partner_settlements', newId), data);
+      playSound('success');
+      return newId;
+    } catch (e: any) {
+      console.error("Error adding partner settlement:", e);
+      throw e;
+    }
+  };
+
+  const deletePartnerSettlement = async (id: string): Promise<void> => {
+    try {
+      await deleteDoc(doc(db, 'partner_settlements', id));
+      playSound('click');
+    } catch (e: any) {
+      console.error("Error deleting partner settlement:", e);
+      throw e;
+    }
+  };
+
+  const updatePartnerSettlement = async (id: string, partial: Partial<PartnerSettlement>): Promise<void> => {
+    try {
+      await setDoc(doc(db, 'partner_settlements', id), partial, { merge: true });
+      playSound('success');
+    } catch (e: any) {
+      console.error("Error updating partner settlement:", e);
+      throw e;
+    }
+  };
+
   return (
     <StoreContext.Provider value={{
       currentUser, login, logout, settings, updateSettings, rates, updateRates, playSound,
@@ -2196,7 +2248,11 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       stockHistory, addStockHistoryEvent,
       stockLoaded,
       setProductDepartment,
-      seedSampleBeautyProducts
+      seedSampleBeautyProducts,
+      partnerSettlements,
+      addPartnerSettlement,
+      deletePartnerSettlement,
+      updatePartnerSettlement
     }}>
       {children}
     </StoreContext.Provider>

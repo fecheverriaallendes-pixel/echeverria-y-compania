@@ -17,7 +17,8 @@ import {
   ArrowUpRight,
   LayoutDashboard,
   FileText,
-  Truck
+  Truck,
+  Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -33,7 +34,7 @@ import {
   Cell
 } from 'recharts';
 import { useStore } from '../store/GlobalContext';
-import { Sale } from '../types';
+import { Sale, getItemDepartamento } from '../types';
 
 const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }: any) => (
   <div className="bg-white p-7 rounded-[40px] border border-slate-100 shadow-[0_15px_40px_rgba(0,0,0,0.03)] relative overflow-hidden group hover:shadow-xl transition-all duration-500">
@@ -57,10 +58,68 @@ const StatCard = ({ title, value, icon: Icon, color, subtitle, trend }: any) => 
 );
 
 export default function Dashboard() {
-  const { getStats, getReportData, syncWithCloud, isSyncing, settings, sales, coupons } = useStore();
+  const { getStats, getReportData, syncWithCloud, isSyncing, settings, sales, coupons, stock } = useStore();
   const [reportState, setReportState] = React.useState<{isOpen: boolean, type: 'weekly' | 'monthly' | 'custom', sales: Sale[]}>({isOpen: false, type: 'weekly', sales: []});
   const [dateRange, setDateRange] = React.useState({ start: '', end: '' });
   const stats = getStats();
+
+  const weeklyBeautySettlement = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToSat = day === 6 ? 0 : 6 - day;
+    const currentSat = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToSat);
+    currentSat.setHours(23, 59, 59, 999);
+    const startOfWeek = new Date(currentSat);
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    let totalCostoPagar = 0;
+    let totalVentas = 0;
+    let totalUnidades = 0;
+
+    sales.forEach(s => {
+      if (s.anulada) return;
+      const d = s.fecha ? new Date(s.fecha) : (s.timestamp ? new Date(s.timestamp) : null);
+      if (!d || isNaN(d.getTime())) return;
+      if (d < startOfWeek || d > currentSat) return;
+
+      if (Array.isArray(s.items) && s.items.length > 0) {
+        s.items.forEach(it => {
+          const code = (it.codigoFardo || '').trim().toUpperCase();
+          const stockItem = stock.find(st => st.codigo.trim().toUpperCase() === code);
+          const isBeauty = stockItem ? (stockItem.departamento === 'BELLEZA' || getItemDepartamento(stockItem) === 'BELLEZA') : getItemDepartamento({ codigo: code }) === 'BELLEZA';
+          if (isBeauty) {
+            const cant = Number(it.cantidad) || 1;
+            const cost = stockItem ? Number(stockItem.precioCosto) || 0 : 0;
+            const price = Number(it.valorUnitario) || 0;
+            totalCostoPagar += (cant * cost);
+            totalVentas += (cant * price);
+            totalUnidades += cant;
+          }
+        });
+      } else if (s.codigoFardo) {
+        const code = (s.codigoFardo || '').trim().toUpperCase();
+        const stockItem = stock.find(st => st.codigo.trim().toUpperCase() === code);
+        const isBeauty = stockItem ? (stockItem.departamento === 'BELLEZA' || getItemDepartamento(stockItem) === 'BELLEZA') : getItemDepartamento({ codigo: code }) === 'BELLEZA';
+        if (isBeauty) {
+          const cant = Number(s.cantidad) || 1;
+          const cost = stockItem ? Number(stockItem.precioCosto) || 0 : 0;
+          const price = Number(s.valorUnitario) || (Number(s.total) / cant) || 0;
+          totalCostoPagar += (cant * cost);
+          totalVentas += (Number(s.total) || (cant * price));
+          totalUnidades += cant;
+        }
+      }
+    });
+
+    const utilidad = totalVentas - totalCostoPagar;
+    return {
+      totalCostoPagar,
+      totalVentas,
+      utilidad,
+      totalUnidades
+    };
+  }, [sales, stock]);
 
   const pendingCoupons = coupons.filter(c => !c.used).length;
   const totalPendingValue = coupons.filter(c => !c.used).reduce((acc, c) => acc + c.value, 0);
@@ -240,6 +299,15 @@ export default function Dashboard() {
         <StatCard title="Cupones Pendientes" value={pendingCoupons} icon={Ticket} color="emerald" subtitle="Cupones por canjear" />
         <StatCard title="Dinero en Cupones" value={`$${(totalPendingValue || 0).toLocaleString('es-CL')}`} icon={DollarSign} color="red" subtitle="Valor total pendiente" />
         <StatCard title="Créditos Pendientes" value={`$${(totalCreditosPendientes || 0).toLocaleString('es-CL')}`} icon={DollarSign} color="rose" subtitle={`${countCreditosPendientes} créditos/abonos activos`} />
+        <Link to="/liquidacion-socia" className="block text-left">
+          <StatCard 
+            title="Socia: Liquidación Sábado" 
+            value={`$${(weeklyBeautySettlement.totalCostoPagar || 0).toLocaleString('es-CL')}`} 
+            icon={Sparkles} 
+            color="rose" 
+            subtitle={`${weeklyBeautySettlement.totalUnidades} un. belleza | Utilidad: $${weeklyBeautySettlement.utilidad.toLocaleString('es-CL')}`} 
+          />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

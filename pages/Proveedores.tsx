@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   Wallet, 
   PlusCircle, 
@@ -10,14 +11,15 @@ import {
   X, 
   CheckCircle2, 
   Clock, 
-  ChevronRight,
-  Info,
-  CreditCard,
-  Container,
-  FileText,
-  BadgeDollarSign,
-  Trash2,
-  AlertTriangle
+  ChevronRight, 
+  Info, 
+  CreditCard, 
+  Container, 
+  FileText, 
+  BadgeDollarSign, 
+  Trash2, 
+  AlertTriangle,
+  Sparkles
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
 import { PurchaseType, Purchase } from '../types';
@@ -119,6 +121,35 @@ export default function Proveedores() {
           <h3 className="text-4xl font-black tracking-tighter">{purchases.filter(p => p.tipo === PurchaseType.CONTENEDOR && p.estado === 'PENDIENTE').length} Pendientes</h3>
           <p className="text-[10px] text-emerald-400 font-bold uppercase mt-4">Inversión de alto volumen</p>
         </div>
+      </div>
+
+      {/* Banner de acceso a Liquidación Semanal Socia */}
+      <div className="p-6 bg-gradient-to-r from-rose-50 via-white to-pink-50 border-2 border-rose-200 rounded-[32px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center flex-shrink-0 shadow-md shadow-rose-500/30">
+            <Sparkles size={24} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
+                Pagos Semanales (Sábados)
+              </span>
+            </div>
+            <h4 className="text-base font-black text-slate-900 uppercase tracking-tight mt-1">
+              Liquidación Semanal Socia — Belleza y Maquillaje
+            </h4>
+            <p className="text-xs text-slate-600 font-medium">
+              Calcula automáticamente el total a pagar según precio costo por las ventas de la semana y visualiza la utilidad neta obtenida.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/liquidacion-socia"
+          className="flex items-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 flex-shrink-0 self-start sm:self-auto"
+        >
+          <span>Ir a Liquidación</span>
+          <ChevronRight size={16} />
+        </Link>
       </div>
 
       {/* Buscador */}

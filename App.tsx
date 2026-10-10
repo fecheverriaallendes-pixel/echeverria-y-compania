@@ -22,7 +22,8 @@ import {
   BookOpen,
   CreditCard,
   Factory,
-  Percent
+  Percent,
+  Sparkles
 } from 'lucide-react';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
@@ -34,6 +35,7 @@ import Etiquetas from './pages/Etiquetas';
 import Configuracion from './pages/Configuracion';
 import Comisiones from './pages/Comisiones';
 import Proveedores from './pages/Proveedores';
+import LiquidacionSocia from './pages/LiquidacionSocia';
 import Catalogo from './pages/Catalogo';
 import CatalogoPublico from './pages/CatalogoPublico';
 import CRM from './pages/CRM';
@@ -60,6 +62,7 @@ const Sidebar = ({ isOpen, toggle }: { isOpen: boolean; toggle: () => void }) =>
     { name: 'Nómina Comisiones', icon: Coins, path: '/comisiones', roles: [StaffRole.ADMIN] },
     { name: 'Cheques', icon: CreditCard, path: '/cheques', roles: [StaffRole.ADMIN] },
     { name: 'Pagos Proveedores', icon: Wallet, path: '/proveedores', roles: [StaffRole.ADMIN] },
+    { name: 'Liquidación Socia', icon: Sparkles, path: '/liquidacion-socia', roles: [StaffRole.ADMIN] },
     { name: 'Inventario Stock', icon: Package, path: '/stock', roles: [StaffRole.ADMIN, StaffRole.BODEGA, StaffRole.DESPACHO] },
     { name: 'Logística Despacho', icon: Truck, path: '/despachos', roles: [StaffRole.ADMIN, StaffRole.VENDEDOR, StaffRole.BODEGA, StaffRole.DESPACHO] },
     { name: 'Mis Despachos', icon: Truck, path: '/transportista', roles: [StaffRole.TRANSPORTISTA, StaffRole.ADMIN] },
@@ -319,6 +322,7 @@ function AppLayout() {
             <Route path="/comisiones" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Comisiones /></ProtectedRoute>} />
             <Route path="/cheques" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Cheques /></ProtectedRoute>} />
             <Route path="/proveedores" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Proveedores /></ProtectedRoute>} />
+            <Route path="/liquidacion-socia" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><LiquidacionSocia /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

@@ -391,3 +391,33 @@ export interface RatesConfig {
   commissionLote: number;
 }
 
+export interface PartnerSettlement {
+  id: string;
+  fechaPago: string; // YYYY-MM-DD
+  periodo: string; // e.g. "Semana 04/10/2026 al 10/10/2026"
+  fechaInicio: string; // YYYY-MM-DD
+  fechaFin: string; // YYYY-MM-DD
+  totalCosto: number; // Monto a pagar a la socia (precio de costo)
+  totalVentas: number; // Ingresos brutos por ventas de belleza
+  utilidad: number; // Total Ventas - Total Costo
+  cantidadUnidades: number; // Unidades de belleza vendidas
+  cantidadVentas: number; // Número de boletas/ventas
+  metodoPago: string; // Transferencia, Efectivo, Cheque
+  comprobanteReferencia?: string;
+  observaciones?: string;
+  sociaNombre?: string;
+  estado: 'PAGADO' | 'PENDIENTE';
+  creadoPor: string;
+  creadoEn: string;
+  itemsResumen?: {
+    codigo: string;
+    nombre: string;
+    cantidad: number;
+    costoUnitario: number;
+    totalCosto: number;
+    precioVentaUnitario: number;
+    totalVenta: number;
+    utilidad: number;
+  }[];
+}
+
