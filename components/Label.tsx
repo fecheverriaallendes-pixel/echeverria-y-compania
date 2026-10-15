@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sale, LOGO_URL, BRAND_NAME, COMPANY_NAME, LabelFormat } from '../types';
+import { Sale, LabelFormat, getSaleGiro, GIRO_BRANDS, GiroType } from '../types';
 
 interface LabelProps {
   sale: Sale;
@@ -8,6 +8,7 @@ interface LabelProps {
   format?: LabelFormat;
   bultoIndex?: number;
   totalBultos?: number;
+  giroOverride?: GiroType;
 }
 
 // Formateador limpio de teléfono para máxima legibilidad de transportistas
@@ -55,7 +56,7 @@ const BarcodePattern = ({ code }: { code: string }) => {
   );
 };
 
-export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: LabelProps) => {
+export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos, giroOverride }: LabelProps) => {
   const activeFormat: LabelFormat = format || (typeof window !== 'undefined' ? (localStorage.getItem('preferred_label_format') as LabelFormat) : null) || 'logistica';
   const displayItem = item || { codigoFardo: sale.codigoFardo || 'N/A', cantidad: sale.cantidad || 1 };
   const stockItem = stock.find(i => i.codigo === displayItem.codigoFardo);
@@ -68,6 +69,13 @@ export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: La
   const formattedPhone = cleanPhone(sale.telefono);
   const hasMultipleBultos = Boolean(totalBultos && totalBultos > 1);
   const bultoLabelText = hasMultipleBultos ? `BULTO ${bultoIndex || 1} DE ${totalBultos}` : null;
+
+  // Determinación inteligente de giro y marca oficial según requerimiento:
+  // - Si salen solo productos de belleza: ECHEVERRIA COSMETICS
+  // - Si en una nota de venta salen productos de ambos: ECHEVERRIA & COMPAÑÍA
+  // - Si salen solo de tecnología: EL MUNDO TECH
+  const effectiveGiro: GiroType = giroOverride || getSaleGiro(sale, stock);
+  const brandInfo = GIRO_BRANDS[effectiveGiro] || GIRO_BRANDS['TECNOLOGIA'];
 
   // FORMATO 1: CUADRÍCULA LOGÍSTICA PRO (Máxima legibilidad, recuadros marcados, RUT y Teléfono gigantes)
   if (activeFormat === 'logistica') {
@@ -84,17 +92,17 @@ export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: La
         <div className="flex flex-row items-center justify-between border-b-[2.5px] border-black pb-2">
           <div className="flex items-center gap-2">
             <img 
-              src={LOGO_URL} 
-              alt="Logo" 
+              src={brandInfo.logoUrl} 
+              alt={brandInfo.brandName} 
               referrerPolicy="no-referrer" 
               className="w-12 h-12 object-contain" 
             />
             <div>
               <h2 className="text-sm font-black tracking-tight text-black uppercase leading-tight">
-                {BRAND_NAME}
+                {brandInfo.brandName}
               </h2>
               <p className="text-[9px] font-black text-slate-700 uppercase tracking-wide">
-                {COMPANY_NAME}
+                {brandInfo.companyName}
               </p>
               <span 
                 className="text-[8px] font-black uppercase text-black bg-slate-200 border border-black px-1.5 py-0.5 rounded inline-block mt-0.5"
@@ -105,7 +113,7 @@ export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: La
                   printColorAdjust: 'exact'
                 }}
               >
-                GUÍA DE TRANSPORTE
+                {effectiveGiro === 'MIXTO' ? 'GUÍA MIXTA TECH + COSMÉTICA' : (effectiveGiro === 'BELLEZA' ? 'GUÍA COSMÉTICA Y BELLEZA' : 'GUÍA DE TRANSPORTE')}
               </span>
             </div>
           </div>
@@ -404,17 +412,17 @@ export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: La
         <div className="flex items-center justify-between border-b-[3px] border-black pb-2">
           <div className="flex items-center gap-2">
             <img 
-              src={LOGO_URL} 
-              alt="Logo" 
+              src={brandInfo.logoUrl} 
+              alt={brandInfo.brandName} 
               referrerPolicy="no-referrer" 
               className="w-11 h-11 object-contain" 
             />
             <div>
               <h2 className="text-base font-black tracking-tight text-black uppercase leading-none">
-                {BRAND_NAME}
+                {brandInfo.brandName}
               </h2>
               <p className="text-[9px] font-bold text-slate-800 uppercase tracking-widest mt-0.5">
-                DESPACHO INDUSTRIAL
+                {effectiveGiro === 'MIXTO' ? 'DESPACHO MIXTO ECHEVERRIA & CO.' : (effectiveGiro === 'BELLEZA' ? 'COSMÉTICA & BELLEZA' : 'DESPACHO INDUSTRIAL')}
               </p>
             </div>
           </div>
@@ -615,10 +623,10 @@ export const Label = ({ sale, stock, item, format, bultoIndex, totalBultos }: La
       {/* Cabecera */}
       <div className="flex items-center justify-between border-b-2 border-black pb-2">
         <div className="flex items-center gap-2">
-          <img src={LOGO_URL} alt="Logo" referrerPolicy="no-referrer" className="w-11 h-11 object-contain" />
+          <img src={brandInfo.logoUrl} alt={brandInfo.brandName} referrerPolicy="no-referrer" className="w-11 h-11 object-contain" />
           <div>
-            <h2 className="text-sm font-black text-black uppercase leading-none">{BRAND_NAME}</h2>
-            <p className="text-[8px] font-bold text-slate-600 uppercase">{COMPANY_NAME}</p>
+            <h2 className="text-sm font-black text-black uppercase leading-none">{brandInfo.brandName}</h2>
+            <p className="text-[8px] font-bold text-slate-600 uppercase">{brandInfo.companyName}</p>
           </div>
         </div>
         <div className="text-right">

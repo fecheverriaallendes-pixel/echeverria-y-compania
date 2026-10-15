@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sale, SaleType, LOGO_URL, BRAND_NAME, COMPANY_NAME } from '../types';
+import { Sale, SaleType, getSaleGiro, GIRO_BRANDS, GiroType } from '../types';
 
 interface InvoiceProps {
   sale: Sale;
@@ -20,6 +20,9 @@ export const Invoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ sale, s
   const montoAbonado = sale.montoAbonado !== undefined ? sale.montoAbonado : (sale.estadoPago === 'Pagado' ? totalCalculado : 0);
   const saldoPendiente = Math.max(0, totalCalculado - montoAbonado);
 
+  const effectiveGiro: GiroType = getSaleGiro(sale, stock);
+  const brandInfo = GIRO_BRANDS[effectiveGiro] || GIRO_BRANDS['TECNOLOGIA'];
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -39,24 +42,24 @@ export const Invoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ sale, s
       <div className="flex justify-between items-start pb-6 border-b-2 border-slate-900 gap-6">
         <div className="flex items-center gap-4">
           <img 
-            src={LOGO_URL} 
-            alt={BRAND_NAME} 
+            src={brandInfo.logoUrl} 
+            alt={brandInfo.brandName} 
             referrerPolicy="no-referrer" 
             className="w-16 h-16 object-contain rounded-xl border border-slate-200 p-1 bg-white"
           />
           <div>
             <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900 leading-none">
-              {BRAND_NAME}
+              {brandInfo.brandName}
             </h1>
             <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mt-1">
-              {COMPANY_NAME}
+              {brandInfo.companyName}
             </p>
             <div className="flex items-center gap-2 mt-2">
               <span className="px-2.5 py-0.5 bg-slate-900 text-white rounded text-[10px] font-black uppercase tracking-widest">
                 {isNotaVenta ? 'NOTA DE VENTA OFICIAL' : 'COMPROBANTE DE VENTA'}
               </span>
               <span className="text-[11px] font-bold text-slate-500 uppercase">
-                {sale.tipoVenta || 'Venta General'}
+                {effectiveGiro === 'MIXTO' ? 'MULTI-GIRO (TECH + BELLEZA)' : (effectiveGiro === 'BELLEZA' ? 'GIRO BELLEZA' : 'GIRO TECNOLOGÍA')}
               </span>
             </div>
           </div>
@@ -227,7 +230,7 @@ export const Invoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ sale, s
       <div className="grid grid-cols-2 gap-12 mt-12 pt-8 border-t border-slate-200">
         <div className="text-center">
           <div className="w-48 mx-auto border-b border-slate-400 mb-2"></div>
-          <p className="text-xs font-black text-slate-900 uppercase">{COMPANY_NAME}</p>
+          <p className="text-xs font-black text-slate-900 uppercase">{brandInfo.companyName}</p>
           <p className="text-[10px] text-slate-500 uppercase">Firma Autorizada / Despacho</p>
         </div>
 

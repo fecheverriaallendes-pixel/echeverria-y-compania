@@ -294,7 +294,7 @@ function AppLayout() {
   const location = useLocation();
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
-  const isPublicCatalog = location.pathname === '/catalogo-publico';
+  const isPublicCatalog = location.pathname.startsWith('/catalogo-publico');
 
   return (
     <div className="h-screen bg-slate-50 overflow-hidden relative">
@@ -307,6 +307,7 @@ function AppLayout() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/catalogo-publico" element={<CatalogoPublico />} />
+            <Route path="/catalogo-publico/:giroParam" element={<CatalogoPublico />} />
             <Route path="/dashboard" element={<ProtectedRoute roles={[StaffRole.ADMIN]}><Dashboard /></ProtectedRoute>} />
             <Route path="/catalogo" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><Catalogo /></ProtectedRoute>} />
             <Route path="/registrar" element={<ProtectedRoute roles={[StaffRole.ADMIN, StaffRole.VENDEDOR]}><RegistrarVenta /></ProtectedRoute>} />

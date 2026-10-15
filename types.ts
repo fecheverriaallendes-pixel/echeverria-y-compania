@@ -3,6 +3,55 @@ export const COMPANY_NAME = "Echeverria & Compañía";
 export const BRAND_NAME = "EL MUNDO TECH";
 export const LOGO_URL = "/mundo_tech_logo.png";
 
+// Giros y Marcas Independientes
+export const BEAUTY_BRAND_NAME = "ECHEVERRIA COSMETICS";
+export const BEAUTY_LOGO_URL = "/echeverria_cosmetics_logo.svg";
+
+export const PARENT_COMPANY_NAME = "Echeverria & Compañía";
+export const PARENT_COMPANY_LOGO_URL = "/echeverria_compania_logo.svg";
+
+export type GiroType = 'TECNOLOGIA' | 'BELLEZA' | 'MIXTO';
+
+export interface GiroBrandInfo {
+  giro: GiroType;
+  brandName: string;
+  companyName: string;
+  shortName: string;
+  logoUrl: string;
+  badgeLabel: string;
+  tagline: string;
+}
+
+export const GIRO_BRANDS: Record<GiroType, GiroBrandInfo> = {
+  TECNOLOGIA: {
+    giro: 'TECNOLOGIA',
+    brandName: 'EL MUNDO TECH',
+    companyName: 'Echeverria & Compañía',
+    shortName: 'El Mundo Tech',
+    logoUrl: '/mundo_tech_logo.png',
+    badgeLabel: 'TECNOLOGÍA & ELECTRÓNICA',
+    tagline: 'Tecnología, Gadgets & Periféricos'
+  },
+  BELLEZA: {
+    giro: 'BELLEZA',
+    brandName: 'ECHEVERRIA COSMETICS',
+    companyName: 'Echeverria & Compañía',
+    shortName: 'Echeverria Cosmetics',
+    logoUrl: '/echeverria_cosmetics_logo.svg',
+    badgeLabel: 'BELLEZA & COSMÉTICA',
+    tagline: 'Belleza, Maquillaje & Cuidado Personal'
+  },
+  MIXTO: {
+    giro: 'MIXTO',
+    brandName: 'ECHEVERRIA & COMPAÑÍA',
+    companyName: 'El Mundo Tech & Echeverria Cosmetics',
+    shortName: 'Echeverria & Cía.',
+    logoUrl: '/echeverria_compania_logo.svg',
+    badgeLabel: 'DESPACHO CORPORATIVO MULTI-GIRO',
+    tagline: 'Distribución y Logística Integral'
+  }
+};
+
 export type LabelFormat = 'logistica' | 'industrial' | 'clasica';
 
 export type DepartamentoGiro = 'TECNOLOGIA' | 'BELLEZA';
@@ -74,6 +123,39 @@ export const getItemDepartamento = (item: { departamento?: string; codigo?: stri
     return 'BELLEZA';
   }
   
+  return 'TECNOLOGIA';
+};
+
+export const getItemGiro = (item: { departamento?: string; codigo?: string; tipo?: string; especificaciones?: string }): DepartamentoGiro => {
+  return getItemDepartamento(item);
+};
+
+export const getSaleGiro = (
+  sale: { items?: { codigoFardo?: string; cantidad?: number }[]; codigoFardo?: string; variante?: string },
+  stockList: { codigo: string; departamento?: string; tipo?: string; especificaciones?: string }[] = []
+): GiroType => {
+  const itemsList = (sale.items && sale.items.length > 0)
+    ? sale.items
+    : [{ codigoFardo: sale.codigoFardo || '', cantidad: 1 }];
+
+  let hasTech = false;
+  let hasBeauty = false;
+
+  for (const it of itemsList) {
+    const stockItem = stockList.find(s => s.codigo === it.codigoFardo);
+    const depto = stockItem 
+      ? getItemDepartamento(stockItem)
+      : getItemDepartamento({ codigo: it.codigoFardo, tipo: sale.variante || '' });
+
+    if (depto === 'BELLEZA') {
+      hasBeauty = true;
+    } else {
+      hasTech = true;
+    }
+  }
+
+  if (hasTech && hasBeauty) return 'MIXTO';
+  if (hasBeauty) return 'BELLEZA';
   return 'TECNOLOGIA';
 };
 

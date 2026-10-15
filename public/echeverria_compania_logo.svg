@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="corpNavy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d97706" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+  </defs>
+
+  <!-- Hexagonal / Shield Outer Frame -->
+  <polygon points="250,25 450,140 450,370 250,480 50,370 50,140" fill="#f8fafc" stroke="url(#corpNavy)" stroke-width="10" stroke-linejoin="round" />
+  <polygon points="250,45 430,150 430,355 250,455 70,355 70,150" fill="none" stroke="url(#goldAccent)" stroke-width="3" stroke-dasharray="8,5" />
+
+  <!-- Monogram Crest (E & C) -->
+  <g transform="translate(250, 190)">
+    <!-- Central Emblem circle -->
+    <circle cx="0" cy="0" r="85" fill="url(#corpNavy)" stroke="url(#goldAccent)" stroke-width="4" />
+    
+    <!-- Interlocked E & C -->
+    <path d="M -35 -40 L 15 -40 C 22 -40 26 -36 24 -30 C 22 -24 16 -24 10 -24 L -15 -24 L -15 -5 L 5 -5 C 10 -5 14 -2 13 4 C 12 10 8 10 2 10 L -15 10 L -15 30 L 15 30 C 22 30 25 34 23 40 C 21 46 16 46 10 46 L -40 46 C -46 46 -50 42 -50 36 L -50 -30 C -50 -36 -46 -40 -40 -40 Z" fill="#ffffff" />
+    
+    <!-- Ampersand & C arc -->
+    <text x="2" y="16" text-anchor="middle" font-family="'Cinzel', serif" font-size="34" font-weight="900" fill="#f59e0b">&amp;</text>
+    <path d="M 45 -25 C 25 -42 -5 -35 -15 -18" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" />
+    <path d="M 45 25 C 25 42 -5 35 -15 18" fill="none" stroke="#f59e0b" stroke-width="5" stroke-linecap="round" />
+  </g>
+
+  <!-- Stars of Quality -->
+  <g fill="url(#goldAccent)">
+    <polygon points="250,85 253,95 264,95 255,101 258,111 250,105 242,111 245,101 236,95 247,95" />
+    <polygon points="215,95 218,103 227,103 220,108 222,116 215,111 208,116 210,108 203,103 212,103" />
+    <polygon points="285,95 288,103 297,103 290,108 292,116 285,111 278,116 280,108 273,103 282,103" />
+  </g>
+
+  <!-- Divider Line -->
+  <line x1="100" y1="315" x2="400" y2="315" stroke="url(#corpNavy)" stroke-width="4" />
+  <circle cx="250" cy="315" r="7" fill="url(#goldAccent)" stroke="#0f172a" stroke-width="2" />
+
+  <!-- Typography: ECHEVERRIA -->
+  <text x="250" y="360" text-anchor="middle" font-family="'Cinzel', 'Playfair Display', 'Times New Roman', serif" font-size="32" font-weight="900" fill="#0f172a" letter-spacing="4">
+    ECHEVERRIA
+  </text>
+
+  <!-- Typography: & COMPAÑÍA -->
+  <text x="250" y="398" text-anchor="middle" font-family="'Montserrat', Arial, sans-serif" font-size="19" font-weight="900" fill="#b45309" letter-spacing="6">
+    &amp; COMPAÑÍA
+  </text>
+
+  <!-- Dual Division Subtitle -->
+  <text x="250" y="428" text-anchor="middle" font-family="'Montserrat', Arial, sans-serif" font-size="10.5" font-weight="800" fill="#475569" letter-spacing="3">
+    EL MUNDO TECH • ECHEVERRIA COSMETICS
+  </text>
+</svg>

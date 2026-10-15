@@ -31,7 +31,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento, getItemImages } from '../types';
+import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, BEAUTY_BRAND_NAME, BEAUTY_LOGO_URL, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento, getItemImages } from '../types';
 import { ProductImageViewerModal } from '../components/ProductImageViewerModal';
 
 type SortOption = 'alpha-asc' | 'alpha-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc';
@@ -444,21 +444,55 @@ export default function Catalogo() {
     return departmentFilter !== 'TODOS' ? `${base}?depto=${departmentFilter}` : base;
   }, [departmentFilter]);
 
-  // Generate QR code for the public catalog link
+  // Enlaces 100% independientes para clientes por giro
+  const techCatalogUrl = useMemo(() => `${window.location.origin}${window.location.pathname}#/catalogo-publico/tecnologia`, []);
+  const beautyCatalogUrl = useMemo(() => `${window.location.origin}${window.location.pathname}#/catalogo-publico/belleza`, []);
+
+  const [copiedGiro, setCopiedGiro] = useState<'tech' | 'beauty' | null>(null);
+  const [activeQrTarget, setActiveQrTarget] = useState<'TECNOLOGIA' | 'BELLEZA'>('TECNOLOGIA');
+
+  // Generate QR code for the selected catalog link
   useEffect(() => {
     if (showQrModal) {
-      QRCode.toDataURL(publicCatalogUrl, {
+      const targetUrl = activeQrTarget === 'BELLEZA' ? beautyCatalogUrl : techCatalogUrl;
+      QRCode.toDataURL(targetUrl, {
         width: 280,
         margin: 2,
         color: {
-          dark: '#0f172a',
+          dark: activeQrTarget === 'BELLEZA' ? '#831843' : '#0f172a',
           light: '#ffffff'
         }
       })
       .then(url => setQrDataUrl(url))
       .catch(err => console.error("Error generating QR:", err));
     }
-  }, [showQrModal, publicCatalogUrl]);
+  }, [showQrModal, activeQrTarget, techCatalogUrl, beautyCatalogUrl]);
+
+  const handleCopyGiroLink = (target: 'tech' | 'beauty') => {
+    playSound('success');
+    const url = target === 'tech' ? techCatalogUrl : beautyCatalogUrl;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedGiro(target);
+      setTimeout(() => setCopiedGiro(null), 2500);
+    });
+  };
+
+  const handleShareGiroWhatsApp = (target: 'tech' | 'beauty') => {
+    playSound('success');
+    if (target === 'tech') {
+      const msg = `¡Hola! 👋 Te comparto el catálogo oficial de *EL MUNDO TECH* (${COMPANY_NAME}) con stock disponible y precios en tiempo real:\n\n🔗 ${techCatalogUrl}\n\nPuedes revisar todos los gadgets y cotizar directamente por este chat.`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+      const msg = `¡Hola! ✨ Te comparto el catálogo oficial de belleza y cosméticos de *ECHEVERRIA COSMETICS* (${COMPANY_NAME}) con stock disponible y precios en tiempo real:\n\n🔗 ${beautyCatalogUrl}\n\nPuedes revisar la colección de maquillaje, skincare y cuidado personal.`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+  };
+
+  const openQrForGiro = (target: 'TECNOLOGIA' | 'BELLEZA') => {
+    setActiveQrTarget(target);
+    setShowQrModal(true);
+    playSound('click');
+  };
 
   // Providers list
   const uniqueProviders = useMemo(() => {
@@ -943,77 +977,166 @@ export default function Catalogo() {
           )}
         </div>
 
-        {/* CLIENT SHARING HUB BANNER */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-5 text-white shadow-xl border border-slate-700 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0">
+        {/* CLIENT SHARING HUB - 2 ENLACES 100% INDEPENDIENTES POR GIRO COMERCIAL */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
-                ENLACE PÚBLICO EN TIEMPO REAL
-              </span>
-              {departmentFilter !== 'TODOS' && (
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                  departmentFilter === 'BELLEZA' ? 'bg-pink-600 text-white' : 'bg-sky-600 text-white'
-                }`}>
-                  Filtro: {departmentFilter === 'BELLEZA' ? 'Belleza' : 'Tech'}
-                </span>
-              )}
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
+                Enlaces Oficiales para Clientes (Separados por Giro)
+              </h3>
             </div>
-            <h3 className="text-base font-black text-white uppercase tracking-tight">
-              Catálogo para Clientes (Vía Link & WhatsApp)
-            </h3>
-            <p className="text-xs text-slate-300 max-w-xl">
-              Comparte este enlace directo con tus clientes para que coticen en tiempo real con stock actualizado y fotos{departmentFilter !== 'TODOS' ? ` (segmentado para ${departmentFilter === 'BELLEZA' ? 'Belleza' : 'Tecnología'})` : ''}.
-            </p>
+            <span className="text-xs font-semibold text-slate-500">
+              Cada link muestra exclusivamente el stock y diseño de su respectiva marca
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            <button
-              id="btn-copy-client-link"
-              onClick={handleShareLink}
-              className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 ${
-                showCopyFeedback 
-                  ? 'bg-emerald-500 text-slate-950 font-black' 
-                  : 'bg-white text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              {showCopyFeedback ? <Check size={16} /> : <Copy size={16} />}
-              <span>{showCopyFeedback ? '¡Copiado!' : 'Copiar Link'}</span>
-            </button>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            
+            {/* CARD 1: LINK INDEPENDIENTE EL MUNDO TECH */}
+            <div className="bg-slate-900 rounded-3xl p-5 text-white shadow-xl border border-slate-800 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white p-1.5 shadow-md flex items-center justify-center flex-shrink-0">
+                      <img src={LOGO_URL} alt={BRAND_NAME} className="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-base uppercase text-white tracking-tight">
+                          {BRAND_NAME}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                          {techCount} Ítems Tech
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Smartwatches, audio, periféricos y accesorios de tecnología
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-            <button
-              id="btn-whatsapp-share-catalog"
-              onClick={handleShareViaWhatsApp}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer"
-            >
-              <MessageCircle size={16} />
-              <span>
-                {departmentFilter === 'BELLEZA' 
-                  ? 'Enviar WhatsApp (Belleza)' 
-                  : departmentFilter === 'TECNOLOGIA' 
-                  ? 'Enviar WhatsApp (Tech)' 
-                  : 'Enviar WhatsApp'}
-              </span>
-            </button>
+                <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 text-[11px] font-mono text-sky-400 truncate">
+                  {techCatalogUrl}
+                </div>
+              </div>
 
-            <button
-              id="btn-open-qr-modal"
-              onClick={() => setShowQrModal(true)}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl transition-all border border-slate-700"
-              title="Mostrar Código QR"
-            >
-              <QrCode size={18} />
-            </button>
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800">
+                <button
+                  id="btn-copy-tech-link"
+                  onClick={() => handleCopyGiroLink('tech')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 ${
+                    copiedGiro === 'tech'
+                      ? 'bg-sky-400 text-slate-950'
+                      : 'bg-white text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  {copiedGiro === 'tech' ? <Check size={14} /> : <Copy size={14} />}
+                  <span>{copiedGiro === 'tech' ? '¡Link Copiado!' : 'Copiar Link Tech'}</span>
+                </button>
 
-            <a
-              href="#/catalogo-publico"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl transition-all border border-slate-700"
-              title="Abrir vista cliente en pestaña nueva"
-            >
-              <ExternalLink size={18} />
-            </a>
+                <button
+                  id="btn-whatsapp-tech"
+                  onClick={() => handleShareGiroWhatsApp('tech')}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
+                >
+                  <MessageCircle size={14} />
+                  <span>WhatsApp Tech</span>
+                </button>
+
+                <button
+                  onClick={() => openQrForGiro('TECNOLOGIA')}
+                  title="Ver Código QR de El Mundo Tech"
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all border border-slate-700"
+                >
+                  <QrCode size={16} />
+                </button>
+
+                <a
+                  href="#/catalogo-publico/tecnologia"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir vista cliente en pestaña nueva"
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-all border border-slate-700"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              </div>
+            </div>
+
+            {/* CARD 2: LINK INDEPENDIENTE ECHEVERRIA COSMETICS */}
+            <div className="bg-gradient-to-br from-slate-900 via-rose-950/70 to-pink-950 rounded-3xl p-5 text-white shadow-xl border border-pink-900/60 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white p-1.5 shadow-md flex items-center justify-center flex-shrink-0">
+                      <img src={BEAUTY_LOGO_URL} alt={BEAUTY_BRAND_NAME} className="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-base uppercase text-white tracking-tight">
+                          {BEAUTY_BRAND_NAME}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                          {beautyCount} Ítems Belleza
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-pink-200/70">
+                        Cosméticos, cuidado facial skincare, maquillaje y accesorios de belleza
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 p-2.5 rounded-2xl border border-pink-900/40 text-[11px] font-mono text-pink-400 truncate">
+                  {beautyCatalogUrl}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-pink-900/50">
+                <button
+                  id="btn-copy-beauty-link"
+                  onClick={() => handleCopyGiroLink('beauty')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 ${
+                    copiedGiro === 'beauty'
+                      ? 'bg-pink-400 text-slate-950'
+                      : 'bg-white text-slate-900 hover:bg-rose-50'
+                  }`}
+                >
+                  {copiedGiro === 'beauty' ? <Check size={14} /> : <Copy size={14} />}
+                  <span>{copiedGiro === 'beauty' ? '¡Link Copiado!' : 'Copiar Link Belleza'}</span>
+                </button>
+
+                <button
+                  id="btn-whatsapp-beauty"
+                  onClick={() => handleShareGiroWhatsApp('beauty')}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
+                >
+                  <MessageCircle size={14} />
+                  <span>WhatsApp Belleza</span>
+                </button>
+
+                <button
+                  onClick={() => openQrForGiro('BELLEZA')}
+                  title="Ver Código QR de Echeverria Cosmetics"
+                  className="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-pink-300 hover:text-white rounded-xl transition-all border border-pink-900/60"
+                >
+                  <QrCode size={16} />
+                </button>
+
+                <a
+                  href="#/catalogo-publico/belleza"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir vista cliente en pestaña nueva"
+                  className="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-pink-300 hover:text-white rounded-xl transition-all border border-pink-900/60"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -1215,12 +1338,41 @@ export default function Catalogo() {
               </button>
             </div>
 
+            {/* Giro Switcher inside QR Modal */}
+            <div className="flex bg-slate-100 p-1 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setActiveQrTarget('TECNOLOGIA')}
+                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  activeQrTarget === 'TECNOLOGIA' ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                💻 Tech
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveQrTarget('BELLEZA')}
+                className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                  activeQrTarget === 'BELLEZA' ? 'bg-pink-600 text-white shadow-sm' : 'text-slate-600'
+                }`}
+              >
+                💄 Belleza
+              </button>
+            </div>
+
             <div className="space-y-1">
+              <div className="w-10 h-10 mx-auto rounded-xl bg-white p-1 border shadow-xs flex items-center justify-center">
+                <img 
+                  src={activeQrTarget === 'BELLEZA' ? BEAUTY_LOGO_URL : LOGO_URL} 
+                  alt="Logo" 
+                  className="w-full h-full object-contain" 
+                />
+              </div>
               <h3 className="font-black text-lg text-slate-900 uppercase">
-                {BRAND_NAME}
+                {activeQrTarget === 'BELLEZA' ? BEAUTY_BRAND_NAME : BRAND_NAME}
               </h3>
               <p className="text-xs text-slate-500">
-                Escanea con la cámara de tu celular para abrir el catálogo público actualizado
+                Escanea con la cámara del celular para abrir el catálogo oficial de {activeQrTarget === 'BELLEZA' ? 'belleza' : 'tecnología'}
               </p>
             </div>
 
@@ -1235,15 +1387,23 @@ export default function Catalogo() {
             </div>
 
             <p className="text-[11px] font-mono text-slate-400 break-all px-2">
-              {publicCatalogUrl}
+              {activeQrTarget === 'BELLEZA' ? beautyCatalogUrl : techCatalogUrl}
             </p>
 
             <button
-              onClick={handleShareLink}
-              className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2"
+              onClick={() => handleCopyGiroLink(activeQrTarget === 'BELLEZA' ? 'beauty' : 'tech')}
+              className={`w-full py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                activeQrTarget === 'BELLEZA' 
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white hover:opacity-90' 
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
+              }`}
             >
-              {showCopyFeedback ? <Check size={16} /> : <Copy size={16} />}
-              <span>{showCopyFeedback ? '¡Link Copiado!' : 'Copiar Enlace'}</span>
+              {copiedGiro === (activeQrTarget === 'BELLEZA' ? 'beauty' : 'tech') ? <Check size={16} /> : <Copy size={16} />}
+              <span>
+                {copiedGiro === (activeQrTarget === 'BELLEZA' ? 'beauty' : 'tech') 
+                  ? '¡Link Copiado!' 
+                  : `Copiar Link ${activeQrTarget === 'BELLEZA' ? 'Cosmética' : 'Tech'}`}
+              </span>
             </button>
           </div>
         </div>

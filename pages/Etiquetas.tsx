@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../store/GlobalContext';
-import { Sale, SaleType, SaleStatus, CommissionType, StaffRole, LOGO_URL, LabelFormat, DispatchType } from '../types';
+import { Sale, SaleType, SaleStatus, CommissionType, StaffRole, LOGO_URL, LabelFormat, DispatchType, getSaleGiro, GIRO_BRANDS, GiroType } from '../types';
 import { Label } from '../components/Label';
 
 export default function Etiquetas() {
@@ -37,6 +37,7 @@ export default function Etiquetas() {
   const [showDemo, setShowDemo] = useState(false);
   const [showPrinted, setShowPrinted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [giroFilter, setGiroFilter] = useState<'TODOS' | GiroType>('TODOS');
   const [showEtiquetadorModal, setShowEtiquetadorModal] = useState(false);
   const [etiquetadorName, setEtiquetadorName] = useState(() => {
     return localStorage.getItem('mdf_last_etiquetador') || currentUser?.nombre || '';
@@ -66,7 +67,7 @@ export default function Etiquetas() {
                        currentUser?.rol === StaffRole.DESPACHO;
 
   // Filter queue of sales ready to print
-  const readyToPrint = sales.filter(s => {
+  const baseReadyToPrint = sales.filter(s => {
     if (!s) return false;
     const matchesSearch = searchTerm === '' || 
                           (s.cliente || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -87,6 +88,14 @@ export default function Etiquetas() {
     if (isPrivileged) return true;
     return s.vendedor === currentUser?.nombre;
   }).sort((a, b) => b.numeroVenta - a.numeroVenta);
+
+  const techQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'TECNOLOGIA').length;
+  const beautyQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'BELLEZA').length;
+  const mixedQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'MIXTO').length;
+
+  const readyToPrint = giroFilter === 'TODOS'
+    ? baseReadyToPrint
+    : baseReadyToPrint.filter(s => getSaleGiro(s, stock) === giroFilter);
 
   // Auto-sync selected IDs when readyToPrint changes
   useEffect(() => {
@@ -341,6 +350,86 @@ export default function Etiquetas() {
         </div>
       )}
 
+      {/* Giro Filtering Tabs - Separación Operativa de Giros */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm no-print space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+            Filtrar Etiquetas por Giro Comercial
+          </span>
+          {giroFilter !== 'TODOS' && (
+            <button
+              onClick={() => { setGiroFilter('TODOS'); playSound('click'); }}
+              className="text-xs font-bold text-slate-500 hover:text-slate-900"
+            >
+              Mostrar todas ({baseReadyToPrint.length})
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => { setGiroFilter('TODOS'); playSound('click'); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              giroFilter === 'TODOS'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Layers size={14} />
+            <span>Todos los Giros</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${giroFilter === 'TODOS' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'}`}>
+              {baseReadyToPrint.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setGiroFilter('TECNOLOGIA'); playSound('click'); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              giroFilter === 'TECNOLOGIA'
+                ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
+                : 'bg-sky-50 text-sky-800 hover:bg-sky-100'
+            }`}
+          >
+            <span>💻 El Mundo Tech</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${giroFilter === 'TECNOLOGIA' ? 'bg-white/25 text-white' : 'bg-sky-200 text-sky-900'}`}>
+              {techQueueCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setGiroFilter('BELLEZA'); playSound('click'); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              giroFilter === 'BELLEZA'
+                ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-600/20'
+                : 'bg-pink-50 text-pink-800 hover:bg-pink-100'
+            }`}
+          >
+            <Sparkles size={14} />
+            <span>💄 Echeverria Cosmetics</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${giroFilter === 'BELLEZA' ? 'bg-white/25 text-white' : 'bg-pink-200 text-pink-900'}`}>
+              {beautyQueueCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setGiroFilter('MIXTO'); playSound('click'); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              giroFilter === 'MIXTO'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+            }`}
+          >
+            <span>🏢 Echeverria & Cía (Mixto)</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${giroFilter === 'MIXTO' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-950'}`}>
+              {mixedQueueCount}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Batch Control Toolbar & Queue Summary */}
       {readyToPrint.length > 0 && (
         <div className="bg-white border border-slate-200 p-4 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 no-print shadow-sm">
@@ -579,6 +668,28 @@ export default function Etiquetas() {
                 <p className="text-[9px] font-bold text-slate-400 uppercase truncate">
                   {sale.metodoDespacho || 'Despacho'}
                 </p>
+                {(() => {
+                  const sGiro = getSaleGiro(sale, stock);
+                  if (sGiro === 'BELLEZA') {
+                    return (
+                      <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-pink-700 bg-pink-50 border border-pink-200 px-2 py-0.5 rounded-full mt-1">
+                        💄 Echeverria Cosmetics
+                      </span>
+                    );
+                  }
+                  if (sGiro === 'MIXTO') {
+                    return (
+                      <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-full mt-1">
+                        🏢 Echeverria & Cía (Mixto)
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="inline-flex items-center gap-1 text-[8.5px] font-black uppercase text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-full mt-1">
+                      💻 El Mundo Tech
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           );
