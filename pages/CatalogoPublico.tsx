@@ -466,7 +466,7 @@ export default function CatalogoPublico() {
                     Giro Belleza & Cosméticos
                   </span>
                   <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1 group-hover:text-pink-300 transition-colors">
-                    ECHEVERRIA COSMETICS
+                    {BEAUTY_BRAND_NAME}
                   </h2>
                   <p className="text-xs text-slate-400 mt-2 line-clamp-2">
                     Cosméticos, cuidado facial skincare, maquillaje, brochas, implementos estéticos y packs exclusivos.

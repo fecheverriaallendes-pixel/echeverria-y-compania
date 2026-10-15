@@ -4,8 +4,8 @@ export const BRAND_NAME = "EL MUNDO TECH";
 export const LOGO_URL = "/mundo_tech_logo.png";
 
 // Giros y Marcas Independientes
-export const BEAUTY_BRAND_NAME = "ECHEVERRIA COSMETICS";
-export const BEAUTY_LOGO_URL = "/echeverria_cosmetics_logo.svg";
+export const BEAUTY_BRAND_NAME = "ECHEVERRÍA COSMETICS";
+export const BEAUTY_LOGO_URL = "/echeverria_cosmetics_logo.png";
 
 export const PARENT_COMPANY_NAME = "Echeverria & Compañía";
 export const PARENT_COMPANY_LOGO_URL = "/echeverria_compania_logo.svg";
@@ -34,10 +34,10 @@ export const GIRO_BRANDS: Record<GiroType, GiroBrandInfo> = {
   },
   BELLEZA: {
     giro: 'BELLEZA',
-    brandName: 'ECHEVERRIA COSMETICS',
+    brandName: 'ECHEVERRÍA COSMETICS',
     companyName: 'Echeverria & Compañía',
-    shortName: 'Echeverria Cosmetics',
-    logoUrl: '/echeverria_cosmetics_logo.svg',
+    shortName: 'Echeverría Cosmetics',
+    logoUrl: '/echeverria_cosmetics_logo.png',
     badgeLabel: 'BELLEZA & COSMÉTICA',
     tagline: 'Belleza, Maquillaje & Cuidado Personal'
   },
