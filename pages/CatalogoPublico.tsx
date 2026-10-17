@@ -98,6 +98,31 @@ export default function CatalogoPublico() {
     }
   }, [currentGiroMode]);
 
+  // Synchronize document title, favicon, and social meta tags with active giro
+  useEffect(() => {
+    if (currentGiroMode === 'PORTAL') {
+      document.title = 'Catálogos Comerciales • Echeverria & Compañía';
+      return;
+    }
+    const isBeauty = activeGiro === 'BELLEZA';
+    document.title = isBeauty 
+      ? 'ECHEVERRÍA COSMETICS – Catálogo Oficial de Belleza'
+      : 'EL MUNDO TECH – Catálogo Oficial de Tecnología';
+
+    const logo = isBeauty ? BEAUTY_LOGO_URL : LOGO_URL;
+    const favicon = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
+    if (favicon) favicon.href = logo;
+
+    const appleIcon = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
+    if (appleIcon) appleIcon.href = logo;
+
+    const ogImage = document.querySelector<HTMLMetaElement>("meta[property='og:image']");
+    if (ogImage) ogImage.content = logo;
+
+    const twitterImage = document.querySelector<HTMLMetaElement>("meta[name='twitter:image']");
+    if (twitterImage) twitterImage.content = logo;
+  }, [activeGiro, currentGiroMode]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [subcategoriaFilter, setSubcategoriaFilter] = useState<string>('TODAS');
   const [activeTab, setActiveTab] = useState<CategoryTab>('TODOS');
@@ -304,11 +329,10 @@ export default function CatalogoPublico() {
     : 'Belleza, Maquillaje & Cuidado Personal • Echeverria & Compañía';
   const storePhone = '56984304335';
 
-  // Construct absolute dedicated link for sharing this specific giro catalog
+  // Construct absolute dedicated link for sharing this specific giro catalog (optimized for OpenGraph / WhatsApp previews)
   const dedicatedCatalogUrl = useMemo(() => {
-    const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    const slug = isTech ? 'tecnologia' : 'belleza';
-    return `${baseUrl}#/catalogo-publico/${slug}`;
+    const file = isTech ? 'tecnologia.html' : 'belleza.html';
+    return `${window.location.origin}/${file}`;
   }, [isTech]);
 
   // Generate single product WhatsApp inquiry

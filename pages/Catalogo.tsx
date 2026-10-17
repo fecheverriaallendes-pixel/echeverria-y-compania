@@ -444,9 +444,9 @@ export default function Catalogo() {
     return departmentFilter !== 'TODOS' ? `${base}?depto=${departmentFilter}` : base;
   }, [departmentFilter]);
 
-  // Enlaces 100% independientes para clientes por giro
-  const techCatalogUrl = useMemo(() => `${window.location.origin}${window.location.pathname}#/catalogo-publico/tecnologia`, []);
-  const beautyCatalogUrl = useMemo(() => `${window.location.origin}${window.location.pathname}#/catalogo-publico/belleza`, []);
+  // Enlaces 100% independientes para clientes por giro (optimizados para OpenGraph / WhatsApp preview)
+  const techCatalogUrl = useMemo(() => `${window.location.origin}/tecnologia.html`, []);
+  const beautyCatalogUrl = useMemo(() => `${window.location.origin}/belleza.html`, []);
 
   const [copiedGiro, setCopiedGiro] = useState<'tech' | 'beauty' | null>(null);
   const [activeQrTarget, setActiveQrTarget] = useState<'TECNOLOGIA' | 'BELLEZA'>('TECNOLOGIA');
@@ -1054,7 +1054,7 @@ export default function Catalogo() {
                 </button>
 
                 <a
-                  href="#/catalogo-publico/tecnologia"
+                  href={techCatalogUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Abrir vista cliente en pestaña nueva"
@@ -1126,7 +1126,7 @@ export default function Catalogo() {
                 </button>
 
                 <a
-                  href="#/catalogo-publico/belleza"
+                  href={beautyCatalogUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   title="Abrir vista cliente en pestaña nueva"
