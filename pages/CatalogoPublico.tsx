@@ -43,6 +43,8 @@ import {
   COMPANY_NAME, 
   BEAUTY_BRAND_NAME, 
   BEAUTY_LOGO_URL, 
+  HOME_BRAND_NAME,
+  HOME_LOGO_URL,
   PARENT_COMPANY_NAME,
   PARENT_COMPANY_LOGO_URL,
   DEPARTAMENTOS, 
@@ -68,9 +70,9 @@ export default function CatalogoPublico() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Determine active giro from URL route param (/catalogo-publico/tecnologia or /catalogo-publico/belleza)
-  // or query param (?giro=tecnologia or ?giro=belleza or ?depto=TECNOLOGIA)
-  const currentGiroMode = useMemo<'TECNOLOGIA' | 'BELLEZA' | 'PORTAL'>(() => {
+  // Determine active giro from URL route param (/catalogo-publico/tecnologia or /catalogo-publico/belleza or /catalogo-publico/hogar)
+  // or query param (?giro=tecnologia or ?giro=belleza or ?giro=hogar or ?depto=HOGAR)
+  const currentGiroMode = useMemo<'TECNOLOGIA' | 'BELLEZA' | 'HOGAR' | 'PORTAL'>(() => {
     const rawParam = (giroParam || '').toLowerCase();
     const search = location.search || location.hash.split('?')[1] || '';
     const params = new URLSearchParams(search);
@@ -83,17 +85,21 @@ export default function CatalogoPublico() {
     if (target === 'belleza' || target === 'cosmetics' || target === 'cosmeticos' || target === 'echeverria-cosmetics') {
       return 'BELLEZA';
     }
+    if (target === 'hogar' || target === 'alfombras' || target === 'alfombra' || target === 'deco' || target === 'home' || target === 'echeverria-home') {
+      return 'HOGAR';
+    }
     return 'PORTAL';
   }, [giroParam, location]);
 
-  const [activeGiro, setActiveGiro] = useState<'TECNOLOGIA' | 'BELLEZA'>(() => {
+  const [activeGiro, setActiveGiro] = useState<'TECNOLOGIA' | 'BELLEZA' | 'HOGAR'>(() => {
     if (currentGiroMode === 'BELLEZA') return 'BELLEZA';
+    if (currentGiroMode === 'HOGAR') return 'HOGAR';
     return 'TECNOLOGIA';
   });
 
   // Sync activeGiro if route/param changes
   useEffect(() => {
-    if (currentGiroMode === 'TECNOLOGIA' || currentGiroMode === 'BELLEZA') {
+    if (currentGiroMode === 'TECNOLOGIA' || currentGiroMode === 'BELLEZA' || currentGiroMode === 'HOGAR') {
       setActiveGiro(currentGiroMode);
     }
   }, [currentGiroMode]);
@@ -105,11 +111,14 @@ export default function CatalogoPublico() {
       return;
     }
     const isBeauty = activeGiro === 'BELLEZA';
+    const isHome = activeGiro === 'HOGAR';
     document.title = isBeauty 
       ? 'ECHEVERRÍA COSMETICS – Catálogo Oficial de Belleza'
+      : isHome
+      ? 'ECHEVERRÍA HOME – Catálogo Oficial de Alfombras & Hogar'
       : 'EL MUNDO TECH – Catálogo Oficial de Tecnología';
 
-    const logo = isBeauty ? BEAUTY_LOGO_URL : LOGO_URL;
+    const logo = isBeauty ? BEAUTY_LOGO_URL : isHome ? HOME_LOGO_URL : LOGO_URL;
     const favicon = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
     if (favicon) favicon.href = logo;
 
@@ -180,11 +189,17 @@ export default function CatalogoPublico() {
 
   const techCount = useMemo(() => availableStock.filter(s => (s.departamento || getItemDepartamento(s)) === 'TECNOLOGIA').length, [availableStock]);
   const beautyCount = useMemo(() => availableStock.filter(s => (s.departamento || getItemDepartamento(s)) === 'BELLEZA').length, [availableStock]);
+  const homeCount = useMemo(() => availableStock.filter(s => (s.departamento || getItemDepartamento(s)) === 'HOGAR').length, [availableStock]);
 
   const availableSubcategories = useMemo(() => {
     const found = DEPARTAMENTOS.find(d => d.id === activeGiro);
-    return found ? found.subcategorias : [];
-  }, [activeGiro]);
+    const preset = found ? found.subcategorias : [];
+    const custom = new Set<string>();
+    giroFilteredStock.forEach(s => {
+      if (s.subcategoria) custom.add(s.subcategoria);
+    });
+    return Array.from(new Set([...preset, ...Array.from(custom)])).sort();
+  }, [activeGiro, giroFilteredStock]);
 
   // Count per subcategory in active Giro
   const subcategoryCounts = useMemo(() => {
@@ -322,24 +337,31 @@ export default function CatalogoPublico() {
   }, 0);
 
   const isTech = activeGiro === 'TECNOLOGIA';
-  const brandName = isTech ? BRAND_NAME : BEAUTY_BRAND_NAME;
-  const logoUrl = isTech ? LOGO_URL : BEAUTY_LOGO_URL;
+  const isBeauty = activeGiro === 'BELLEZA';
+  const isHome = activeGiro === 'HOGAR';
+
+  const brandName = isTech ? BRAND_NAME : isBeauty ? BEAUTY_BRAND_NAME : HOME_BRAND_NAME;
+  const logoUrl = isTech ? LOGO_URL : isBeauty ? BEAUTY_LOGO_URL : HOME_LOGO_URL;
   const storeSubtitle = isTech 
     ? 'Tecnología, Gadgets & Periféricos • Echeverria & Compañía' 
-    : 'Belleza, Maquillaje & Cuidado Personal • Echeverria & Compañía';
+    : isBeauty
+    ? 'Belleza, Maquillaje & Cuidado Personal • Echeverria & Compañía'
+    : 'Alfombras, Textiles & Decoración para el Hogar • Echeverria & Compañía';
   const storePhone = '56984304335';
 
   // Construct absolute dedicated link for sharing this specific giro catalog (optimized for OpenGraph / WhatsApp previews)
   const dedicatedCatalogUrl = useMemo(() => {
-    const file = isTech ? 'tecnologia.html' : 'belleza.html';
+    const file = isTech ? 'tecnologia.html' : isBeauty ? 'belleza.html' : 'hogar.html';
     return `${window.location.origin}/${file}`;
-  }, [isTech]);
+  }, [isTech, isBeauty]);
 
   // Generate single product WhatsApp inquiry
   const handleSingleWhatsApp = (item: StockItem) => {
     let msg = isTech 
       ? `Hola El Mundo Tech! 👋\nMe interesa consultar por este producto de su catálogo de tecnología:\n\n`
-      : `Hola Echeverria Cosmetics! ✨\nMe interesa consultar por este producto de belleza y cosméticos:\n\n`;
+      : isBeauty
+      ? `Hola Echeverria Cosmetics! ✨\nMe interesa consultar por este producto de belleza y cosméticos:\n\n`
+      : `Hola Echeverría Home! 🏠\nMe interesa consultar por esta alfombra / artículo de hogar:\n\n`;
     
     msg += `📦 *${item.tipo}*\n`;
     msg += `🔖 Código: ${item.codigo}\n`;
@@ -361,7 +383,9 @@ export default function CatalogoPublico() {
 
     let msg = isTech
       ? `Hola El Mundo Tech! 👋\nQuisiera cotizar los siguientes productos de su catálogo oficial de tecnología:\n\n`
-      : `Hola Echeverria Cosmetics! ✨\nQuisiera encargar / cotizar los siguientes productos de su catálogo de belleza:\n\n`;
+      : isBeauty
+      ? `Hola Echeverria Cosmetics! ✨\nQuisiera encargar / cotizar los siguientes productos de su catálogo de belleza:\n\n`
+      : `Hola Echeverría Home! 🏠\nQuisiera encargar / cotizar los siguientes productos de su catálogo de alfombras & hogar:\n\n`;
 
     cartList.forEach((entry, idx) => {
       const item = entry.item;
@@ -392,9 +416,9 @@ export default function CatalogoPublico() {
     });
   };
 
-  const handleSwitchGiro = (newGiro: 'TECNOLOGIA' | 'BELLEZA') => {
+  const handleSwitchGiro = (newGiro: 'TECNOLOGIA' | 'BELLEZA' | 'HOGAR') => {
     setActiveGiro(newGiro);
-    const slug = newGiro === 'TECNOLOGIA' ? 'tecnologia' : 'belleza';
+    const slug = newGiro === 'TECNOLOGIA' ? 'tecnologia' : newGiro === 'BELLEZA' ? 'belleza' : 'hogar';
     navigate(`/catalogo-publico/${slug}`, { replace: true });
   };
 
@@ -424,19 +448,19 @@ export default function CatalogoPublico() {
             </div>
           </div>
 
-          {/* TWO INDEPENDENT PORTALS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 text-left">
+          {/* THREE INDEPENDENT PORTALS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 text-left">
             
             {/* PORTAL 1: EL MUNDO TECH */}
             <div 
               onClick={() => handleSwitchGiro('TECNOLOGIA')}
-              className="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950 border-2 border-slate-800 hover:border-sky-500 rounded-[32px] p-6 sm:p-8 flex flex-col justify-between shadow-2xl hover:shadow-sky-500/20 hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
+              className="bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950 border-2 border-slate-800 hover:border-sky-500 rounded-[32px] p-6 sm:p-7 flex flex-col justify-between shadow-2xl hover:shadow-sky-500/20 hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-sky-500/20 transition-all"></div>
               
               <div className="space-y-4 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-lg flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white p-2 shadow-lg flex items-center justify-center">
                     <img src={LOGO_URL} alt={BRAND_NAME} className="w-full h-full object-contain" />
                   </div>
                   <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-sky-500/20 text-sky-400 border border-sky-500/30">
@@ -448,22 +472,22 @@ export default function CatalogoPublico() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-sky-400 block">
                     Giro Tecnología
                   </span>
-                  <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1 group-hover:text-sky-300 transition-colors">
+                  <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white mt-1 group-hover:text-sky-300 transition-colors">
                     EL MUNDO TECH
                   </h2>
                   <p className="text-xs text-slate-400 mt-2 line-clamp-2">
-                    Smartwatches, audífonos bluetooth, accesorios gaming, cables, aros LED y gadgets de última generación.
+                    Smartwatches, audífonos bluetooth, gaming, cables, aros LED y gadgets.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-6 relative z-10 flex items-center justify-between border-t border-slate-800/80 mt-6">
-                <span className="text-xs font-black uppercase tracking-wider text-sky-400 group-hover:underline flex items-center gap-2">
+              <div className="pt-5 relative z-10 flex items-center justify-between border-t border-slate-800/80 mt-5">
+                <span className="text-xs font-black uppercase tracking-wider text-sky-400 group-hover:underline flex items-center gap-1.5">
                   <span>Ver Catálogo Tech</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
                 </span>
                 <span className="text-[10px] font-bold text-slate-500">
-                  Despacho a Regiones
+                  Envíos a Todo Chile
                 </span>
               </div>
             </div>
@@ -471,13 +495,13 @@ export default function CatalogoPublico() {
             {/* PORTAL 2: ECHEVERRIA COSMETICS */}
             <div 
               onClick={() => handleSwitchGiro('BELLEZA')}
-              className="bg-gradient-to-br from-slate-900 via-rose-950/60 to-pink-950 border-2 border-slate-800 hover:border-pink-500 rounded-[32px] p-6 sm:p-8 flex flex-col justify-between shadow-2xl hover:shadow-pink-500/20 hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
+              className="bg-gradient-to-br from-slate-900 via-rose-950/60 to-pink-950 border-2 border-slate-800 hover:border-pink-500 rounded-[32px] p-6 sm:p-7 flex flex-col justify-between shadow-2xl hover:shadow-pink-500/20 hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-pink-500/20 transition-all"></div>
               
               <div className="space-y-4 relative z-10">
                 <div className="flex items-center justify-between">
-                  <div className="w-16 h-16 rounded-2xl bg-white p-2 shadow-lg flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white p-2 shadow-lg flex items-center justify-center">
                     <img src={BEAUTY_LOGO_URL} alt={BEAUTY_BRAND_NAME} className="w-full h-full object-contain" />
                   </div>
                   <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-pink-500/20 text-pink-300 border border-pink-500/30">
@@ -489,22 +513,63 @@ export default function CatalogoPublico() {
                   <span className="text-[10px] font-black uppercase tracking-widest text-pink-400 block">
                     Giro Belleza & Cosméticos
                   </span>
-                  <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-white mt-1 group-hover:text-pink-300 transition-colors">
+                  <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white mt-1 group-hover:text-pink-300 transition-colors">
                     {BEAUTY_BRAND_NAME}
                   </h2>
                   <p className="text-xs text-slate-400 mt-2 line-clamp-2">
-                    Cosméticos, cuidado facial skincare, maquillaje, brochas, implementos estéticos y packs exclusivos.
+                    Cosméticos, cuidado facial skincare, maquillaje, brochas y estética.
                   </p>
                 </div>
               </div>
 
-              <div className="pt-6 relative z-10 flex items-center justify-between border-t border-slate-800/80 mt-6">
-                <span className="text-xs font-black uppercase tracking-wider text-pink-400 group-hover:underline flex items-center gap-2">
+              <div className="pt-5 relative z-10 flex items-center justify-between border-t border-slate-800/80 mt-5">
+                <span className="text-xs font-black uppercase tracking-wider text-pink-400 group-hover:underline flex items-center gap-1.5">
                   <span>Ver Catálogo Belleza</span>
-                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
                 </span>
                 <span className="text-[10px] font-bold text-slate-500">
-                  Venta Detalle y Mayorista
+                  Detalle & Mayorista
+                </span>
+              </div>
+            </div>
+
+            {/* PORTAL 3: ECHEVERRIA HOME & DECO (ALFOMBRAS) */}
+            <div 
+              onClick={() => handleSwitchGiro('HOGAR')}
+              className="bg-gradient-to-br from-slate-900 via-amber-950/60 to-orange-950 border-2 border-slate-800 hover:border-amber-500 rounded-[32px] p-6 sm:p-7 flex flex-col justify-between shadow-2xl hover:shadow-amber-500/20 hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all"></div>
+              
+              <div className="space-y-4 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="w-14 h-14 rounded-2xl bg-white p-2 shadow-lg flex items-center justify-center">
+                    <img src={HOME_LOGO_URL} alt={HOME_BRAND_NAME} className="w-full h-full object-contain" />
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {homeCount} Alfombras & Hogar
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 block">
+                    Giro Alfombras & Decoración
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white mt-1 group-hover:text-amber-300 transition-colors">
+                    {HOME_BRAND_NAME}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-2 line-clamp-2">
+                    Alfombras de área, shaggy pelo largo, pasillos, bajadas de cama y felpudos.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-5 relative z-10 flex items-center justify-between border-t border-slate-800/80 mt-5">
+                <span className="text-xs font-black uppercase tracking-wider text-amber-400 group-hover:underline flex items-center gap-1.5">
+                  <span>Ver Catálogo Alfombras</span>
+                  <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
+                </span>
+                <span className="text-[10px] font-bold text-slate-500">
+                  Despacho Inmediato
                 </span>
               </div>
             </div>
@@ -548,44 +613,80 @@ export default function CatalogoPublico() {
           </span>
         </div>
 
-        {/* Cross-Link to the other giro */}
-        <div className="flex items-center justify-center sm:justify-end gap-3 w-full sm:w-auto text-[11px]">
-          <span className="opacity-80 hidden md:inline">¿Buscas otro giro?</span>
-          <button
-            onClick={() => handleSwitchGiro(isTech ? 'BELLEZA' : 'TECNOLOGIA')}
-            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-              isTech 
-                ? 'bg-pink-600/30 hover:bg-pink-600 text-pink-200 border border-pink-500/40' 
-                : 'bg-sky-600/30 hover:bg-sky-600 text-sky-200 border border-sky-500/40'
-            }`}
-          >
-            {isTech ? (
-              <>
+        {/* Cross-Link to the other giros */}
+        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full sm:w-auto text-[11px]">
+          <span className="opacity-80 hidden md:inline">Otras Tiendas:</span>
+          {isTech ? (
+            <>
+              <button
+                onClick={() => handleSwitchGiro('BELLEZA')}
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 bg-pink-600/30 hover:bg-pink-600 text-pink-200 border border-pink-500/40 cursor-pointer"
+              >
                 <Sparkles size={12} />
-                <span>Ir a Echeverria Cosmetics ({beautyCount}) →</span>
-              </>
-            ) : (
-              <>
+                <span>Belleza & Cosméticos ({beautyCount})</span>
+              </button>
+              <button
+                onClick={() => handleSwitchGiro('HOGAR')}
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 bg-amber-600/30 hover:bg-amber-600 text-amber-200 border border-amber-500/40 cursor-pointer"
+              >
+                <span>🏠 Alfombras & Hogar ({homeCount})</span>
+              </button>
+            </>
+          ) : isBeauty ? (
+            <>
+              <button
+                onClick={() => handleSwitchGiro('TECNOLOGIA')}
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 bg-sky-600/30 hover:bg-sky-600 text-sky-200 border border-sky-500/40 cursor-pointer"
+              >
                 <Cpu size={12} />
-                <span>Ir a El Mundo Tech ({techCount}) →</span>
-              </>
-            )}
-          </button>
+                <span>El Mundo Tech ({techCount})</span>
+              </button>
+              <button
+                onClick={() => handleSwitchGiro('HOGAR')}
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 bg-amber-600/30 hover:bg-amber-600 text-amber-200 border border-amber-500/40 cursor-pointer"
+              >
+                <span>🏠 Alfombras & Hogar ({homeCount})</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => handleSwitchGiro('TECNOLOGIA')}
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 bg-sky-600/30 hover:bg-sky-600 text-sky-200 border border-sky-500/40 cursor-pointer"
+              >
+                <Cpu size={12} />
+                <span>El Mundo Tech ({techCount})</span>
+              </button>
+              <button
+                onClick={() => handleSwitchGiro('BELLEZA')}
+                className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 bg-pink-600/30 hover:bg-pink-600 text-pink-200 border border-pink-500/40 cursor-pointer"
+              >
+                <Sparkles size={12} />
+                <span>Belleza & Cosmética ({beautyCount})</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Main Header (Theme tuned: High-Tech Dark for Tech, Luxury Rose for Cosmetics) */}
+      {/* Main Header (Theme tuned: High-Tech Dark for Tech, Luxury Rose for Cosmetics, Cozy Terracotta/Amber for Home) */}
       <header className={`sticky top-0 z-30 backdrop-blur-md border-b shadow-sm transition-all ${
         isTech 
           ? 'bg-slate-900/95 border-slate-800 text-white' 
-          : 'bg-white/95 border-rose-200 text-slate-900'
+          : isBeauty
+          ? 'bg-white/95 border-rose-200 text-slate-900'
+          : 'bg-stone-900/95 border-amber-900/60 text-white'
       }`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           
           {/* Logo & Brand Identity */}
           <div className="flex items-center gap-3.5 min-w-0">
             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center p-1.5 flex-shrink-0 shadow-md ${
-              isTech ? 'bg-white border border-slate-700' : 'bg-white border-2 border-pink-200'
+              isTech 
+                ? 'bg-white border border-slate-700' 
+                : isBeauty
+                ? 'bg-white border-2 border-pink-200'
+                : 'bg-white border-2 border-amber-300'
             }`}>
               <img 
                 src={logoUrl} 
@@ -598,17 +699,21 @@ export default function CatalogoPublico() {
             <div className="flex flex-col min-w-0">
               <div className="flex items-center gap-2">
                 <span className={`text-base sm:text-xl font-black tracking-tight uppercase truncate ${
-                  isTech ? 'text-white' : 'text-slate-900'
+                  isTech || isHome ? 'text-white' : 'text-slate-900'
                 }`}>
                   {brandName}
                 </span>
                 <span className={`hidden sm:inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                  isTech ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' : 'bg-pink-100 text-pink-800 border border-pink-200'
+                  isTech 
+                    ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30' 
+                    : isBeauty
+                    ? 'bg-pink-100 text-pink-800 border border-pink-200'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                 }`}>
-                  {isTech ? 'TECNOLOGÍA' : 'BELLEZA'}
+                  {isTech ? 'TECNOLOGÍA' : isBeauty ? 'BELLEZA' : 'ALFOMBRAS & HOGAR'}
                 </span>
               </div>
-              <p className={`text-[11px] font-medium truncate ${isTech ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-[11px] font-medium truncate ${isTech || isHome ? 'text-slate-400' : 'text-slate-500'}`}>
                 {storeSubtitle}
               </p>
             </div>
@@ -623,10 +728,12 @@ export default function CatalogoPublico() {
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold active:scale-95 transition-all ${
                 isTech 
                   ? 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700' 
-                  : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                  : isBeauty
+                  ? 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                  : 'bg-stone-800 text-amber-200 hover:bg-stone-700 border border-amber-800/60'
               }`}
             >
-              {copiedLink ? <Check size={16} className={isTech ? 'text-sky-400' : 'text-rose-600'} /> : <Share2 size={16} />}
+              {copiedLink ? <Check size={16} className={isTech ? 'text-sky-400' : isHome ? 'text-amber-400' : 'text-rose-600'} /> : <Share2 size={16} />}
               <span className="hidden md:inline">{copiedLink ? '¡Enlace copiado!' : 'Compartir Link'}</span>
             </button>
 
@@ -635,14 +742,18 @@ export default function CatalogoPublico() {
               href={`https://wa.me/${storePhone}?text=${encodeURIComponent(
                 isTech 
                   ? 'Hola El Mundo Tech! 👋 Quisiera hacer una consulta general sobre su catálogo de tecnología.' 
-                  : 'Hola Echeverria Cosmetics! ✨ Quisiera hacer una consulta general sobre su catálogo de belleza.'
+                  : isBeauty
+                  ? 'Hola Echeverria Cosmetics! ✨ Quisiera hacer una consulta general sobre su catálogo de belleza.'
+                  : 'Hola Echeverría Home! 🏠 Quisiera hacer una consulta general sobre su catálogo de alfombras y textiles.'
               )}`}
               target="_blank"
               rel="noopener noreferrer"
               className={`flex items-center gap-2 px-3.5 py-2 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md active:scale-95 transition-all ${
                 isTech 
                   ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20' 
-                  : 'bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 shadow-pink-600/20'
+                  : isBeauty
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 shadow-pink-600/20'
+                  : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-600/20'
               }`}
             >
               <MessageCircle size={16} />
@@ -668,14 +779,18 @@ export default function CatalogoPublico() {
                 placeholder={
                   isTech 
                     ? "Buscar tecnología: smartwatch, audífonos, accesorios, cables, cargadores..."
-                    : "Buscar belleza: labiales, skincare, bases, sombras, brochas, hidratante..."
+                    : isBeauty
+                    ? "Buscar belleza: labiales, skincare, bases, sombras, brochas, hidratante..."
+                    : "Buscar alfombras: de sala, shaggy, pasillos, bajadas de cama, felpudos, medidas..."
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={`w-full pl-11 pr-10 py-3 rounded-2xl border text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all ${
                   isTech 
                     ? 'bg-slate-50 hover:bg-slate-100/80 focus:bg-white border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10'
-                    : 'bg-rose-50/50 hover:bg-rose-50 focus:bg-white border-rose-200 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10'
+                    : isBeauty
+                    ? 'bg-rose-50/50 hover:bg-rose-50 focus:bg-white border-rose-200 focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10'
+                    : 'bg-white hover:bg-amber-50/60 focus:bg-white border-amber-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10'
                 }`}
               />
               {searchTerm && (
@@ -746,13 +861,13 @@ export default function CatalogoPublico() {
           {availableSubcategories.length > 0 && (
             <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">
-                {isTech ? 'Familias Tech:' : 'Secciones Belleza:'}
+                {isTech ? 'Familias Tech:' : isBeauty ? 'Secciones Belleza:' : 'Líneas de Alfombras:'}
               </span>
               <button
                 onClick={() => setSubcategoriaFilter('TODAS')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   subcategoriaFilter === 'TODAS'
-                    ? isTech ? 'bg-slate-900 text-white shadow-sm' : 'bg-rose-900 text-white shadow-sm'
+                    ? isTech ? 'bg-slate-900 text-white shadow-sm' : isBeauty ? 'bg-rose-900 text-white shadow-sm' : 'bg-amber-900 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -768,7 +883,9 @@ export default function CatalogoPublico() {
                       subcategoriaFilter === sub
                         ? isTech 
                           ? 'bg-sky-600 text-white shadow-sm' 
-                          : 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-sm'
+                          : isBeauty
+                          ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-sm'
+                          : 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-sm'
                         : count > 0
                           ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
@@ -789,9 +906,9 @@ export default function CatalogoPublico() {
           {/* Category Tabs */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
             {[
-              { id: 'TODOS', label: isTech ? 'Todo Tecnología' : 'Toda la Belleza' },
-              { id: 'PRODUCTOS', label: isTech ? 'Individuales / Gadgets' : 'Cosméticos Individuales' },
-              { id: 'LOTES', label: isTech ? 'Packs & Sets' : 'Sets & Estuches' },
+              { id: 'TODOS', label: isTech ? 'Todo Tecnología' : isBeauty ? 'Toda la Belleza' : 'Todas las Alfombras' },
+              { id: 'PRODUCTOS', label: isTech ? 'Individuales / Gadgets' : isBeauty ? 'Cosméticos Individuales' : 'Alfombras de Sala' },
+              { id: 'LOTES', label: isTech ? 'Packs & Sets' : isBeauty ? 'Sets & Estuches' : 'Pasillos & Packs' },
               { id: 'MAYORISTA', label: '🔥 Precios Mayoristas' },
               { id: 'OFERTAS', label: '⭐ Destacados' }
             ].map(tab => (
@@ -803,7 +920,9 @@ export default function CatalogoPublico() {
                   activeTab === tab.id
                     ? isTech 
                       ? 'bg-slate-900 text-white shadow-sm' 
-                      : 'bg-pink-700 text-white shadow-sm'
+                      : isBeauty
+                      ? 'bg-pink-700 text-white shadow-sm'
+                      : 'bg-amber-900 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                 }`}
               >

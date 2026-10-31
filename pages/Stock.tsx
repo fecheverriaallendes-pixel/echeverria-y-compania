@@ -26,7 +26,7 @@ function parseLocalDate(dateStr: string): Date {
 }
 
 export default function Stock() {
-  const { stock, addStockItem, updateStockItem, togglePromocion, removeStockItem, bulkAddStock, setProductDepartment, seedSampleBeautyProducts, currentUser, playSound, stockHistory, sales } = useStore();
+  const { stock, addStockItem, updateStockItem, togglePromocion, removeStockItem, bulkAddStock, setProductDepartment, seedSampleBeautyProducts, seedSampleHomeProducts, currentUser, playSound, stockHistory, sales } = useStore();
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState('TODOS');
@@ -34,6 +34,9 @@ export default function Stock() {
   const [departmentFilter, setDepartmentFilter] = useState<'TODOS' | DepartamentoGiro>('TODOS');
   const [subcategoriaFilter, setSubcategoriaFilter] = useState<string>('TODAS');
   const [isSeedingBeauty, setIsSeedingBeauty] = useState(false);
+  const [isSeedingHome, setIsSeedingHome] = useState(false);
+  const [newBaleCustomSub, setNewBaleCustomSub] = useState(false);
+  const [editCustomSub, setEditCustomSub] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -52,7 +55,7 @@ export default function Stock() {
     const params = new URLSearchParams(location.search);
     const action = params.get('action');
     const depto = params.get('depto');
-    if (depto === 'BELLEZA' || depto === 'TECNOLOGIA') {
+    if (depto === 'BELLEZA' || depto === 'TECNOLOGIA' || depto === 'HOGAR') {
       setDepartmentFilter(depto as DepartamentoGiro);
     }
     if (action === 'add') {
@@ -268,14 +271,22 @@ export default function Stock() {
     return stock.filter(item => (item.departamento || getItemDepartamento(item)) === 'BELLEZA').length;
   }, [stock]);
 
+  const homeCount = useMemo(() => {
+    return stock.filter(item => (item.departamento || getItemDepartamento(item)) === 'HOGAR').length;
+  }, [stock]);
+
   const availableSubcategories = useMemo(() => {
+    const allSubs = new Set<string>();
     if (departmentFilter === 'TODOS') {
-      const allSubs = new Set<string>();
+      DEPARTAMENTOS.forEach(d => d.subcategorias.forEach(s => allSubs.add(s)));
       stock.forEach(i => { if (i.subcategoria) allSubs.add(i.subcategoria); });
-      return Array.from(allSubs);
+    } else {
+      const deptDef = DEPARTAMENTOS.find(d => d.id === departmentFilter);
+      if (deptDef) deptDef.subcategorias.forEach(s => allSubs.add(s));
+      stock.filter(i => (i.departamento || getItemDepartamento(i)) === departmentFilter)
+           .forEach(i => { if (i.subcategoria) allSubs.add(i.subcategoria); });
     }
-    const deptDef = DEPARTAMENTOS.find(d => d.id === departmentFilter);
-    return deptDef ? deptDef.subcategorias : [];
+    return Array.from(allSubs).sort();
   }, [departmentFilter, stock]);
 
   const inventoryStats = useMemo(() => {
@@ -432,6 +443,23 @@ export default function Stock() {
     }
   };
 
+  const handleSeedHomeSamples = async () => {
+    if (!canModify) return;
+    try {
+      setIsSeedingHome(true);
+      playSound('click');
+      const count = await seedSampleHomeProducts();
+      setIsSeedingHome(false);
+      playSound('success');
+      showFeedback(`✅ Se agregaron ${count} alfombras y artículos de muestra para Hogar & Deco.`, 'success');
+      setDepartmentFilter('HOGAR');
+    } catch (e) {
+      setIsSeedingHome(false);
+      playSound('error');
+      showFeedback('Hubo un problema al cargar las alfombras de muestra.', 'error');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canModify) {
@@ -443,7 +471,11 @@ export default function Stock() {
     try {
       let finalCodigo = newBale.codigo;
       if (!finalCodigo) {
-          const prefix = newBale.departamento === 'BELLEZA' ? 'BEL-' : 'TEC-';
+          const prefix = newBale.departamento === 'BELLEZA' 
+            ? 'BEL-' 
+            : newBale.departamento === 'HOGAR'
+            ? 'ALF-'
+            : 'TEC-';
           const existingCodes = stock.map(s => s.codigo || '').filter(c => c.startsWith(prefix));
           let nextNum = 1;
           if(existingCodes.length > 0) {
@@ -676,7 +708,33 @@ export default function Stock() {
                 {beautyCount}
               </span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => { setDepartmentFilter('HOGAR'); setSubcategoriaFilter('TODAS'); playSound('click'); }}
+              className={`flex items-center gap-2.5 px-6 py-3.5 rounded-[22px] font-black text-xs uppercase tracking-wider transition-all ${
+                departmentFilter === 'HOGAR'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-600/30'
+                  : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100'
+              }`}
+            >
+              <span>🏠 Alfombras & Hogar</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${departmentFilter === 'HOGAR' ? 'bg-white/20 text-white' : 'bg-amber-200/80 text-amber-950'}`}>
+                {homeCount}
+              </span>
+            </button>
           </div>
+
+          {canModify && homeCount === 0 && (
+            <button
+              type="button"
+              onClick={handleSeedHomeSamples}
+              disabled={isSeedingHome}
+              className="flex items-center gap-2 px-5 py-3 bg-amber-100 text-amber-900 hover:bg-amber-200 rounded-2xl font-black text-xs uppercase tracking-wider transition-all border border-amber-200"
+            >
+              <span>🏠 {isSeedingHome ? 'Cargando Alfombras...' : 'Cargar 8 Alfombras de Muestra'}</span>
+            </button>
+          )}
 
           {canModify && beautyCount === 0 && (
             <button
@@ -725,6 +783,36 @@ export default function Stock() {
           </div>
         )}
       </div>
+
+      {/* Tarjeta de bienvenida al nuevo giro si no hay productos de hogar */}
+      {homeCount === 0 && (
+        <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-100/60 rounded-3xl p-6 border-2 border-amber-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white shadow-md flex items-center justify-center text-amber-700 text-2xl flex-shrink-0">
+              🏠
+            </div>
+            <div>
+              <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight">
+                ¡Nuevo Giro: Alfombras, Decoración & Textiles de Hogar!
+              </h4>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl font-medium">
+                Tu inventario y catálogo ahora incorporan alfombras de sala, shaggy, pasillos, bajadas de cama y felpudos con subcategorías flexibles. Puedes registrar tus alfombras manualmente o cargar 8 referencias de muestra.
+              </p>
+            </div>
+          </div>
+          {canModify && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleSeedHomeSamples}
+                disabled={isSeedingHome}
+                className="px-6 py-3.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-600/20 hover:from-amber-700 hover:to-orange-700 transition-all flex items-center gap-2"
+              >
+                <span>🏠 {isSeedingHome ? 'Cargando...' : 'Cargar Muestras Alfombras'}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tarjeta de bienvenida al nuevo giro si no hay productos de belleza */}
       {beautyCount === 0 && (
@@ -915,8 +1003,9 @@ export default function Stock() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredStock.map((item) => {
-                const depto = item.departamento || getItemDepartamento(item);
-                const isBelleza = depto === 'BELLEZA';
+                const itemDepto = item.departamento || getItemDepartamento(item);
+                const isBelleza = itemDepto === 'BELLEZA';
+                const isHogar = itemDepto === 'HOGAR';
 
                 return (
                   <tr key={`${item.id}-${item.codigo}`} className={`group hover:bg-slate-50 transition-colors ${item.stockActual < 3 && item.stockActual > 0 ? 'bg-red-50/30' : ''}`}>
@@ -924,10 +1013,12 @@ export default function Stock() {
                       <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider ${
                         isBelleza 
                           ? 'bg-pink-100 text-pink-700 border border-pink-200' 
+                          : isHogar
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
                           : 'bg-sky-100 text-sky-700 border border-sky-200'
                       }`}>
-                        {isBelleza ? <Sparkles size={12} /> : <Cpu size={12} />}
-                        {isBelleza ? 'Belleza' : 'Tec'}
+                        {isBelleza ? <Sparkles size={12} /> : isHogar ? <span>🏠</span> : <Cpu size={12} />}
+                        {isBelleza ? 'Belleza' : isHogar ? 'Hogar' : 'Tec'}
                       </span>
                     </td>
                     <td className="px-6 py-6">
@@ -1039,17 +1130,24 @@ export default function Stock() {
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={async () => {
-                              const newDepto: DepartamentoGiro = isBelleza ? 'TECNOLOGIA' : 'BELLEZA';
+                              const currentDepto = item.departamento || getItemDepartamento(item);
+                              const newDepto: DepartamentoGiro = currentDepto === 'TECNOLOGIA' 
+                                ? 'BELLEZA' 
+                                : currentDepto === 'BELLEZA' 
+                                ? 'HOGAR' 
+                                : 'TECNOLOGIA';
                               await setProductDepartment(item.id, newDepto);
                               playSound('success');
-                              showFeedback(`Producto reasignado a ${newDepto === 'BELLEZA' ? 'Belleza y Cuidados' : 'Tecnología'}.`, 'success');
+                              showFeedback(`Producto reasignado a ${newDepto === 'BELLEZA' ? 'Belleza' : newDepto === 'HOGAR' ? 'Alfombras & Hogar' : 'Tecnología'}.`, 'success');
                             }}
                             className={`p-3 rounded-xl transition-all shadow-sm ${
                               isBelleza 
-                                ? 'bg-sky-50 text-sky-700 hover:bg-sky-600 hover:text-white' 
-                                : 'bg-pink-50 text-pink-700 hover:bg-pink-600 hover:text-white'
+                                ? 'bg-pink-50 text-pink-700 hover:bg-pink-600 hover:text-white' 
+                                : isHogar
+                                ? 'bg-amber-50 text-amber-800 hover:bg-amber-600 hover:text-white'
+                                : 'bg-sky-50 text-sky-700 hover:bg-sky-600 hover:text-white'
                             }`}
-                            title={`Cambiar giro a ${isBelleza ? 'Tecnología' : 'Belleza'}`}
+                            title={`Cambiar giro comercial`}
                           >
                             <RefreshCw size={16} />
                           </button>
@@ -1110,45 +1208,88 @@ export default function Stock() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                   Giro / Departamento Comercial
                 </label>
-                <div className="grid grid-cols-2 gap-3 bg-white p-2 rounded-2xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-white p-2 rounded-2xl border border-slate-200">
                   <button
                     type="button"
-                    onClick={() => setNewBale({ ...newBale, departamento: 'TECNOLOGIA', subcategoria: '' })}
-                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                    onClick={() => { setNewBale({ ...newBale, departamento: 'TECNOLOGIA', subcategoria: '' }); setNewBaleCustomSub(false); }}
+                    className={`py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
                       newBale.departamento === 'TECNOLOGIA'
                         ? 'bg-sky-600 text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Cpu size={16} /> 💻 Tecnología
+                    <Cpu size={15} /> 💻 Tecnología
                   </button>
                   <button
                     type="button"
-                    onClick={() => setNewBale({ ...newBale, departamento: 'BELLEZA', subcategoria: '' })}
-                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                    onClick={() => { setNewBale({ ...newBale, departamento: 'BELLEZA', subcategoria: '' }); setNewBaleCustomSub(false); }}
+                    className={`py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
                       newBale.departamento === 'BELLEZA'
                         ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Sparkles size={16} /> 💄 Belleza & Cuidados
+                    <Sparkles size={15} /> 💄 Belleza
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setNewBale({ ...newBale, departamento: 'HOGAR', subcategoria: '' }); setNewBaleCustomSub(false); }}
+                    className={`py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                      newBale.departamento === 'HOGAR'
+                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>🏠 Alfombras & Hogar</span>
                   </button>
                 </div>
 
                 <div className="pt-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Subcategoría
-                  </label>
-                  <select
-                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-indigo-500"
-                    value={newBale.subcategoria || ''}
-                    onChange={(e) => setNewBale({ ...newBale, subcategoria: e.target.value })}
-                  >
-                    <option value="">-- Seleccionar Subcategoría ({newBale.departamento === 'BELLEZA' ? 'Belleza' : 'Tecnología'}) --</option>
-                    {(DEPARTAMENTOS.find(d => d.id === newBale.departamento)?.subcategorias || []).map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      Subcategoría de Producto
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setNewBaleCustomSub(!newBaleCustomSub)}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase cursor-pointer"
+                    >
+                      {newBaleCustomSub ? '← Ver opciones sugeridas' : '➕ Crear subcategoría libre'}
+                    </button>
+                  </div>
+
+                  {!newBaleCustomSub ? (
+                    <select
+                      className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-indigo-500"
+                      value={newBale.subcategoria || ''}
+                      onChange={(e) => {
+                        if (e.target.value === '__CUSTOM__') {
+                          setNewBaleCustomSub(true);
+                          setNewBale({ ...newBale, subcategoria: '' });
+                        } else {
+                          setNewBale({ ...newBale, subcategoria: e.target.value });
+                        }
+                      }}
+                    >
+                      <option value="">-- Seleccionar Subcategoría ({newBale.departamento === 'BELLEZA' ? 'Belleza' : newBale.departamento === 'HOGAR' ? 'Alfombras & Hogar' : 'Tecnología'}) --</option>
+                      {(DEPARTAMENTOS.find(d => d.id === newBale.departamento)?.subcategorias || []).map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                      <option value="__CUSTOM__">➕ Escribir otra subcategoría personalizada...</option>
+                    </select>
+                  ) : (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        placeholder="Ej: Alfombras Infantiles, Pasillos Rústicos, etc."
+                        className="w-full px-5 py-3.5 bg-white border-2 border-indigo-400 rounded-2xl font-bold text-xs outline-none focus:border-indigo-600"
+                        value={newBale.subcategoria || ''}
+                        onChange={(e) => setNewBale({ ...newBale, subcategoria: e.target.value })}
+                        autoFocus
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Escribe el nombre libremente. Se guardará directamente en el inventario y catálogo.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1336,45 +1477,88 @@ export default function Stock() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
                   Giro / Departamento Comercial
                 </label>
-                <div className="grid grid-cols-2 gap-3 bg-white p-2 rounded-2xl border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-white p-2 rounded-2xl border border-slate-200">
                   <button
                     type="button"
                     onClick={() => setEditingItem({ ...editingItem, departamento: 'TECNOLOGIA' })}
-                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                    className={`py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
                       (editingItem.departamento || getItemDepartamento(editingItem)) === 'TECNOLOGIA'
                         ? 'bg-sky-600 text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Cpu size={16} /> 💻 Tecnología
+                    <Cpu size={15} /> 💻 Tecnología
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingItem({ ...editingItem, departamento: 'BELLEZA' })}
-                    className={`py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                    className={`py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
                       (editingItem.departamento || getItemDepartamento(editingItem)) === 'BELLEZA'
                         ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Sparkles size={16} /> 💄 Belleza & Cuidados
+                    <Sparkles size={15} /> 💄 Belleza
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, departamento: 'HOGAR' })}
+                    className={`py-3 px-3 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                      (editingItem.departamento || getItemDepartamento(editingItem)) === 'HOGAR'
+                        ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>🏠 Alfombras & Hogar</span>
                   </button>
                 </div>
 
                 <div className="pt-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Subcategoría
-                  </label>
-                  <select
-                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-indigo-500"
-                    value={editingItem.subcategoria || ''}
-                    onChange={(e) => setEditingItem({ ...editingItem, subcategoria: e.target.value })}
-                  >
-                    <option value="">-- Seleccionar Subcategoría --</option>
-                    {(DEPARTAMENTOS.find(d => d.id === (editingItem.departamento || getItemDepartamento(editingItem)))?.subcategorias || []).map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      Subcategoría
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setEditCustomSub(!editCustomSub)}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase cursor-pointer"
+                    >
+                      {editCustomSub ? '← Ver sugerencias' : '➕ Crear subcategoría libre'}
+                    </button>
+                  </div>
+
+                  {!editCustomSub ? (
+                    <select
+                      className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl font-bold text-xs outline-none focus:border-indigo-500"
+                      value={editingItem.subcategoria || ''}
+                      onChange={(e) => {
+                        if (e.target.value === '__CUSTOM__') {
+                          setEditCustomSub(true);
+                          setEditingItem({ ...editingItem, subcategoria: '' });
+                        } else {
+                          setEditingItem({ ...editingItem, subcategoria: e.target.value });
+                        }
+                      }}
+                    >
+                      <option value="">-- Seleccionar Subcategoría --</option>
+                      {(DEPARTAMENTOS.find(d => d.id === (editingItem.departamento || getItemDepartamento(editingItem)))?.subcategorias || []).map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                      <option value="__CUSTOM__">➕ Escribir otra subcategoría personalizada...</option>
+                    </select>
+                  ) : (
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        placeholder="Ej: Alfombras Redondas, Bajadas Nórdicas, etc."
+                        className="w-full px-5 py-3.5 bg-white border-2 border-indigo-400 rounded-2xl font-bold text-xs outline-none focus:border-indigo-600"
+                        value={editingItem.subcategoria || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, subcategoria: e.target.value })}
+                        autoFocus
+                      />
+                      <p className="text-[10px] text-slate-400 italic">Escribe el nombre libremente.</p>
+                    </div>
+                  )}
                 </div>
               </div>
 

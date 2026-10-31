@@ -31,7 +31,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useStore } from '../store/GlobalContext';
-import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, BEAUTY_BRAND_NAME, BEAUTY_LOGO_URL, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento, getItemImages } from '../types';
+import { StockItem, LOGO_URL, BRAND_NAME, COMPANY_NAME, BEAUTY_BRAND_NAME, BEAUTY_LOGO_URL, HOME_BRAND_NAME, HOME_LOGO_URL, DEPARTAMENTOS, DepartamentoGiro, getItemDepartamento, getItemImages } from '../types';
 import { ProductImageViewerModal } from '../components/ProductImageViewerModal';
 
 type SortOption = 'alpha-asc' | 'alpha-desc' | 'price-asc' | 'price-desc' | 'stock-asc' | 'stock-desc';
@@ -60,6 +60,7 @@ const ProductRow: React.FC<{
 }> = ({ item, onOpenViewer, onSelectDepto, onSelectSubcategoria }) => {
   const depto = item.departamento || getItemDepartamento(item);
   const isBelleza = depto === 'BELLEZA';
+  const isHogar = depto === 'HOGAR';
   const images = getItemImages(item);
 
   return (
@@ -68,12 +69,16 @@ const ProductRow: React.FC<{
         <button
           type="button"
           onClick={() => onSelectDepto?.(depto)}
-          title={`Filtrar catálogo por ${isBelleza ? 'Belleza' : 'Tecnología'}`}
+          title={`Filtrar catálogo por ${isBelleza ? 'Belleza' : isHogar ? 'Alfombras & Hogar' : 'Tecnología'}`}
           className={`px-2 py-0.5 rounded text-[9px] font-black uppercase transition-transform hover:scale-105 active:scale-95 cursor-pointer ${
-            isBelleza ? 'bg-pink-100 text-pink-700 hover:bg-pink-200' : 'bg-sky-100 text-sky-700 hover:bg-sky-200'
+            isBelleza 
+              ? 'bg-pink-100 text-pink-700 hover:bg-pink-200' 
+              : isHogar
+              ? 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+              : 'bg-sky-100 text-sky-700 hover:bg-sky-200'
           }`}
         >
-          {isBelleza ? '💄 Belleza' : '💻 Tech'}
+          {isBelleza ? '💄 Belleza' : isHogar ? '🏠 Hogar' : '💻 Tech'}
         </button>
       </td>
       <td className="px-2 py-1.5">
@@ -169,6 +174,7 @@ const CatalogDigitalCard: React.FC<{
   const images = getItemImages(item);
   const itemDepto = item.departamento || getItemDepartamento(item);
   const isBelleza = itemDepto === 'BELLEZA';
+  const isHogar = itemDepto === 'HOGAR';
 
   const currentImage = images[activeImageIndex] || item.imagenUrl;
 
@@ -198,7 +204,7 @@ const CatalogDigitalCard: React.FC<{
           />
         ) : (
           <div className="flex flex-col items-center justify-center text-slate-400">
-            {isBelleza ? <Sparkles size={28} className="text-pink-400" /> : <Package size={28} />}
+            {isBelleza ? <Sparkles size={28} className="text-pink-400" /> : isHogar ? <span className="text-3xl">🏠</span> : <Package size={28} />}
             <span className="text-[9px] font-black uppercase mt-1 tracking-wider text-slate-400">{item.unidad}</span>
           </div>
         )}
@@ -230,15 +236,15 @@ const CatalogDigitalCard: React.FC<{
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onSelectDepto(isBelleza ? 'BELLEZA' : 'TECNOLOGIA');
+              onSelectDepto(itemDepto);
               playSound('click');
             }}
-            title={`Filtrar solo productos de ${isBelleza ? 'Belleza' : 'Tecnología'}`}
+            title={`Filtrar solo productos de ${isBelleza ? 'Belleza' : isHogar ? 'Alfombras & Hogar' : 'Tecnología'}`}
             className={`px-2 py-0.5 rounded text-white text-[9px] font-black uppercase transition-transform hover:scale-105 active:scale-95 cursor-pointer shadow-xs ${
-              isBelleza ? 'bg-pink-600/95 hover:bg-pink-500' : 'bg-sky-600/95 hover:bg-sky-500'
+              isBelleza ? 'bg-pink-600/95 hover:bg-pink-500' : isHogar ? 'bg-amber-600/95 hover:bg-amber-500' : 'bg-sky-600/95 hover:bg-sky-500'
             }`}
           >
-            {isBelleza ? '💄 Belleza' : '💻 Tech'}
+            {isBelleza ? '💄 Belleza' : isHogar ? '🏠 Hogar' : '💻 Tech'}
           </button>
           <span className="px-2 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-black uppercase">
             {item.proveedor || 'General'}
@@ -370,7 +376,7 @@ export default function Catalogo() {
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState('TODOS');
-  const [departmentFilter, setDepartmentFilter] = useState<'TODOS' | 'TECNOLOGIA' | 'BELLEZA'>('TODOS');
+  const [departmentFilter, setDepartmentFilter] = useState<'TODOS' | 'TECNOLOGIA' | 'BELLEZA' | 'HOGAR'>('TODOS');
   const [subcategoriaFilter, setSubcategoriaFilter] = useState<string>('TODAS');
   const [categoryFilter, setCategoryFilter] = useState<FilterCategory>('TODOS');
   const [stockOnlyFilter, setStockOnlyFilter] = useState<boolean>(true);
@@ -391,12 +397,18 @@ export default function Catalogo() {
 
   const techCount = useMemo(() => stock.filter(s => (s.departamento || getItemDepartamento(s)) === 'TECNOLOGIA').length, [stock]);
   const beautyCount = useMemo(() => stock.filter(s => (s.departamento || getItemDepartamento(s)) === 'BELLEZA').length, [stock]);
+  const homeCount = useMemo(() => stock.filter(s => (s.departamento || getItemDepartamento(s)) === 'HOGAR').length, [stock]);
 
   const availableSubcategories = useMemo(() => {
     if (departmentFilter === 'TODOS') return [];
     const found = DEPARTAMENTOS.find(d => d.id === departmentFilter);
-    return found ? found.subcategorias : [];
-  }, [departmentFilter]);
+    const preset = found ? found.subcategorias : [];
+    const custom = new Set<string>();
+    stock.filter(s => (s.departamento || getItemDepartamento(s)) === departmentFilter).forEach(s => {
+      if (s.subcategoria) custom.add(s.subcategoria);
+    });
+    return Array.from(new Set([...preset, ...Array.from(custom)])).sort();
+  }, [departmentFilter, stock]);
 
   // Count items per subcategory
   const subcategoryCounts = useMemo(() => {
@@ -412,7 +424,7 @@ export default function Catalogo() {
     return counts;
   }, [stock, departmentFilter]);
 
-  // Vendor fast keyboard navigation (1: Todos, 2: Tecnología, 3: Belleza)
+  // Vendor fast keyboard navigation (1: Todos, 2: Tecnología, 3: Belleza, 4: Hogar)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeTag = document.activeElement?.tagName?.toLowerCase();
@@ -432,6 +444,10 @@ export default function Catalogo() {
         setDepartmentFilter('BELLEZA');
         setSubcategoriaFilter('TODAS');
         playSound('click');
+      } else if (e.key === '4') {
+        setDepartmentFilter('HOGAR');
+        setSubcategoriaFilter('TODAS');
+        playSound('click');
       }
     };
 
@@ -447,48 +463,62 @@ export default function Catalogo() {
   // Enlaces 100% independientes para clientes por giro (optimizados para OpenGraph / WhatsApp preview)
   const techCatalogUrl = useMemo(() => `${window.location.origin}/tecnologia.html`, []);
   const beautyCatalogUrl = useMemo(() => `${window.location.origin}/belleza.html`, []);
+  const homeCatalogUrl = useMemo(() => `${window.location.origin}/hogar.html`, []);
 
-  const [copiedGiro, setCopiedGiro] = useState<'tech' | 'beauty' | null>(null);
-  const [activeQrTarget, setActiveQrTarget] = useState<'TECNOLOGIA' | 'BELLEZA'>('TECNOLOGIA');
+  const [copiedGiro, setCopiedGiro] = useState<'tech' | 'beauty' | 'home' | null>(null);
+  const [activeQrTarget, setActiveQrTarget] = useState<'TECNOLOGIA' | 'BELLEZA' | 'HOGAR'>('TECNOLOGIA');
 
   // Generate QR code for the selected catalog link
   useEffect(() => {
     if (showQrModal) {
-      const targetUrl = activeQrTarget === 'BELLEZA' ? beautyCatalogUrl : techCatalogUrl;
+      const targetUrl = activeQrTarget === 'BELLEZA' 
+        ? beautyCatalogUrl 
+        : activeQrTarget === 'HOGAR'
+        ? homeCatalogUrl
+        : techCatalogUrl;
+      const darkColor = activeQrTarget === 'BELLEZA' 
+        ? '#831843' 
+        : activeQrTarget === 'HOGAR'
+        ? '#7c2d12'
+        : '#0f172a';
+
       QRCode.toDataURL(targetUrl, {
         width: 280,
         margin: 2,
         color: {
-          dark: activeQrTarget === 'BELLEZA' ? '#831843' : '#0f172a',
+          dark: darkColor,
           light: '#ffffff'
         }
       })
       .then(url => setQrDataUrl(url))
       .catch(err => console.error("Error generating QR:", err));
     }
-  }, [showQrModal, activeQrTarget, techCatalogUrl, beautyCatalogUrl]);
+  }, [showQrModal, activeQrTarget, techCatalogUrl, beautyCatalogUrl, homeCatalogUrl]);
 
-  const handleCopyGiroLink = (target: 'tech' | 'beauty') => {
+  const handleCopyGiroLink = (target: 'tech' | 'beauty' | 'home') => {
     playSound('success');
-    const url = target === 'tech' ? techCatalogUrl : beautyCatalogUrl;
+    const url = target === 'tech' ? techCatalogUrl : target === 'beauty' ? beautyCatalogUrl : homeCatalogUrl;
     navigator.clipboard.writeText(url).then(() => {
       setCopiedGiro(target);
       setTimeout(() => setCopiedGiro(null), 2500);
     });
   };
 
-  const handleShareGiroWhatsApp = (target: 'tech' | 'beauty') => {
+  const handleShareGiroWhatsApp = (target: 'tech' | 'beauty' | 'home') => {
     playSound('success');
     if (target === 'tech') {
       const msg = `¡Hola! 👋 Te comparto el catálogo oficial de *EL MUNDO TECH* (${COMPANY_NAME}) con stock disponible y precios en tiempo real:\n\n🔗 ${techCatalogUrl}\n\nPuedes revisar todos los gadgets y cotizar directamente por este chat.`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-    } else {
+    } else if (target === 'beauty') {
       const msg = `¡Hola! ✨ Te comparto el catálogo oficial de belleza y cosméticos de *ECHEVERRIA COSMETICS* (${COMPANY_NAME}) con stock disponible y precios en tiempo real:\n\n🔗 ${beautyCatalogUrl}\n\nPuedes revisar la colección de maquillaje, skincare y cuidado personal.`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+      const msg = `¡Hola! 🏠 Te comparto el catálogo oficial de alfombras y decoración de *ECHEVERRÍA HOME & DECO* (${COMPANY_NAME}) con stock disponible y medidas en tiempo real:\n\n🔗 ${homeCatalogUrl}\n\nPuedes revisar alfombras de sala, shaggy, pasillos, bajadas de cama y felpudos.`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
     }
   };
 
-  const openQrForGiro = (target: 'TECNOLOGIA' | 'BELLEZA') => {
+  const openQrForGiro = (target: 'TECNOLOGIA' | 'BELLEZA' | 'HOGAR') => {
     setActiveQrTarget(target);
     setShowQrModal(true);
     playSound('click');
@@ -871,13 +901,32 @@ export default function Catalogo() {
               }`}
             >
               <Sparkles size={16} className={departmentFilter === 'BELLEZA' ? 'text-white' : 'text-pink-600'} />
-              <span>Belleza, Maquillaje & Cuidado</span>
+              <span>Belleza & Cosmética</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                 departmentFilter === 'BELLEZA' ? 'bg-white/25 text-white' : 'bg-pink-200 text-pink-900'
               }`}>
                 {beautyCount}
               </span>
               <span className="text-[9px] opacity-70 hidden md:inline font-mono">[3]</span>
+            </button>
+
+            {/* Tab: Hogar & Alfombras */}
+            <button
+              id="tab-catalog-hogar"
+              onClick={() => { setDepartmentFilter('HOGAR'); setSubcategoriaFilter('TODAS'); playSound('click'); }}
+              className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                departmentFilter === 'HOGAR'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-600/30 ring-2 ring-amber-500'
+                  : 'bg-amber-50 text-amber-900 hover:bg-amber-100'
+              }`}
+            >
+              <span>🏠 Alfombras & Hogar</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                departmentFilter === 'HOGAR' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-950'
+              }`}>
+                {homeCount}
+              </span>
+              <span className="text-[9px] opacity-70 hidden md:inline font-mono">[4]</span>
             </button>
           </div>
 
@@ -1131,6 +1180,78 @@ export default function Catalogo() {
                   rel="noopener noreferrer"
                   title="Abrir vista cliente en pestaña nueva"
                   className="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-pink-300 hover:text-white rounded-xl transition-all border border-pink-900/60"
+                >
+                  <ExternalLink size={16} />
+                </a>
+              </div>
+            </div>
+
+            {/* CARD 3: LINK INDEPENDIENTE ECHEVERRIA HOME & DECO (ALFOMBRAS) */}
+            <div className="bg-gradient-to-br from-slate-900 via-amber-950/70 to-orange-950 rounded-3xl p-5 text-white shadow-xl border border-amber-900/60 flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white p-1.5 shadow-md flex items-center justify-center flex-shrink-0">
+                      <img src={HOME_LOGO_URL} alt={HOME_BRAND_NAME} className="w-full h-full object-contain" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-black text-base uppercase text-white tracking-tight">
+                          {HOME_BRAND_NAME}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          {homeCount} Alfombras & Hogar
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-200/70">
+                        Alfombras de área, shaggy, pasillos, bajadas de cama, felpudos y textiles
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-950 p-2.5 rounded-2xl border border-amber-900/40 text-[11px] font-mono text-amber-400 truncate">
+                  {homeCatalogUrl}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-amber-900/50">
+                <button
+                  id="btn-copy-home-link"
+                  onClick={() => handleCopyGiroLink('home')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95 ${
+                    copiedGiro === 'home'
+                      ? 'bg-amber-400 text-slate-950'
+                      : 'bg-white text-slate-900 hover:bg-amber-50'
+                  }`}
+                >
+                  {copiedGiro === 'home' ? <Check size={14} /> : <Copy size={14} />}
+                  <span>{copiedGiro === 'home' ? '¡Link Copiado!' : 'Copiar Link Hogar'}</span>
+                </button>
+
+                <button
+                  id="btn-whatsapp-home"
+                  onClick={() => handleShareGiroWhatsApp('home')}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all shadow-md active:scale-95"
+                >
+                  <MessageCircle size={14} />
+                  <span>WhatsApp Hogar</span>
+                </button>
+
+                <button
+                  onClick={() => openQrForGiro('HOGAR')}
+                  title="Ver Código QR de Echeverría Home"
+                  className="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-amber-300 hover:text-white rounded-xl transition-all border border-amber-900/60"
+                >
+                  <QrCode size={16} />
+                </button>
+
+                <a
+                  href={homeCatalogUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Abrir vista cliente en pestaña nueva"
+                  className="p-2.5 bg-slate-900/80 hover:bg-slate-800 text-amber-300 hover:text-white rounded-xl transition-all border border-amber-900/60"
                 >
                   <ExternalLink size={16} />
                 </a>

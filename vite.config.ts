@@ -19,6 +19,8 @@ export default defineConfig(({ mode }) => {
                 req.url = req.url.replace(/^\/belleza\/?(\?.*)?$/, '/belleza.html$1');
               } else if (req.url === '/tecnologia' || req.url === '/tecnologia/' || req.url?.startsWith('/tecnologia?')) {
                 req.url = req.url.replace(/^\/tecnologia\/?(\?.*)?$/, '/tecnologia.html$1');
+              } else if (req.url === '/hogar' || req.url === '/hogar/' || req.url?.startsWith('/hogar?') || req.url === '/alfombras' || req.url === '/alfombras/' || req.url?.startsWith('/alfombras?')) {
+                req.url = req.url.replace(/^\/(hogar|alfombras)\/?(\?.*)?$/, '/hogar.html$2');
               }
               next();
             });

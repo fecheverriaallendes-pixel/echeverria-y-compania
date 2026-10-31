@@ -473,6 +473,7 @@ interface StoreContextType {
   addStockHistoryEvent: (event: Omit<StockHistoryEvent, 'id' | 'fecha'>) => Promise<void>;
   stockLoaded: boolean;
   seedSampleBeautyProducts: () => Promise<number>;
+  seedSampleHomeProducts: () => Promise<number>;
   setProductDepartment: (id: string, departamento: DepartamentoGiro, subcategoria?: string) => Promise<void>;
   partnerSettlements: PartnerSettlement[];
   addPartnerSettlement: (settlement: Omit<PartnerSettlement, 'id'>) => Promise<string>;
@@ -1572,6 +1573,141 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
     return inserted;
   };
 
+  const seedSampleHomeProducts = async (): Promise<number> => {
+    const sampleHomeProducts: Omit<StockItem, 'id' | 'disponible'>[] = [
+      {
+        codigo: 'ALF-001',
+        tipo: 'Alfombra Shaggy Pelo Largo 150x200cm Gris Nórdico',
+        proveedor: 'HOME TEXTILES',
+        precioCosto: 14000,
+        precioSugerido: 29990,
+        precioMayorista: 21990,
+        minUnidadesMayorista: 3,
+        stockActual: 20,
+        unidad: 'PIEZA',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Alfombras Shaggy & Pelo Largo',
+        especificaciones: 'Pelo extra suave de 4cm de altura, base con microperlas antideslizantes, fácil limpieza y secado rápido.'
+      },
+      {
+        codigo: 'ALF-002',
+        tipo: 'Alfombra de Sala Geométrica Vintage 160x230cm Beige & Terracota',
+        proveedor: 'HOME TEXTILES',
+        precioCosto: 19000,
+        precioSugerido: 39990,
+        precioMayorista: 29990,
+        minUnidadesMayorista: 3,
+        stockActual: 15,
+        unidad: 'PIEZA',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Alfombras de Área & Sala',
+        especificaciones: 'Tejido jacquard de alta densidad, resistente a manchas y alto tráfico, apto para living y comedor.'
+      },
+      {
+        codigo: 'ALF-003',
+        tipo: 'Pasillo Corredor Lavable 80x300cm Estilo Boho Étnico',
+        proveedor: 'DECO IMPORT',
+        precioCosto: 11000,
+        precioSugerido: 23990,
+        precioMayorista: 17500,
+        minUnidadesMayorista: 4,
+        stockActual: 25,
+        unidad: 'PIEZA',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Pasillos & Bajadas de Cama',
+        especificaciones: 'Ideal para pasillos largos y recibidores, base de goma antideslizante lavable a máquina, colores firmes.'
+      },
+      {
+        codigo: 'ALF-004',
+        tipo: 'Bajada de Cama Plush Ultra Suave 60x110cm Pack x2 Crema',
+        proveedor: 'HOME TEXTILES',
+        precioCosto: 8500,
+        precioSugerido: 18990,
+        precioMayorista: 13990,
+        minUnidadesMayorista: 4,
+        stockActual: 30,
+        unidad: 'PACK',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Pasillos & Bajadas de Cama',
+        especificaciones: 'Pack dúo para ambos lados de la cama, microfibra térmica de tacto afelpado con soporte de memory foam.'
+      },
+      {
+        codigo: 'ALF-005',
+        tipo: 'Alfombra Vinílica Impermeable Cocina/Comedor 50x120cm Hidráulica',
+        proveedor: 'DECO IMPORT',
+        precioCosto: 6000,
+        precioSugerido: 14990,
+        precioMayorista: 9990,
+        minUnidadesMayorista: 5,
+        stockActual: 35,
+        unidad: 'PIEZA',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Alfombras Vinílicas & Lavables',
+        especificaciones: '100% impermeable, antibacteriana, se limpia con un paño húmedo. Diseño de mosaico hidráulico portugués.'
+      },
+      {
+        codigo: 'ALF-006',
+        tipo: 'Felpudo Entrada Fibra de Coco & Goma Gruesa 40x60cm Welcome',
+        proveedor: 'ECO HOME',
+        precioCosto: 4000,
+        precioSugerido: 9990,
+        precioMayorista: 6500,
+        minUnidadesMayorista: 6,
+        stockActual: 40,
+        unidad: 'UNIDAD',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Felpudos & Entradas',
+        especificaciones: 'Fibra de coco natural para raspar calzado con base de caucho vulcanizado pesado que no se desplaza.'
+      },
+      {
+        codigo: 'ALF-007',
+        tipo: 'Alfombra Yute Natural Tejida a Mano Redonda 120cm Diámetro',
+        proveedor: 'ECO HOME',
+        precioCosto: 13000,
+        precioSugerido: 27990,
+        precioMayorista: 19990,
+        minUnidadesMayorista: 3,
+        stockActual: 18,
+        unidad: 'PIEZA',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Alfombras Nórdicas & Geométricas',
+        especificaciones: 'Fibra 100% biodegradable ecológica, diseño circular trenzado artesanal para ambientes cálidos y naturales.'
+      },
+      {
+        codigo: 'ALF-008',
+        tipo: 'Set x4 Cojines Decorativos Terciopelo 45x45cm con Cierre Oculto',
+        proveedor: 'DECO IMPORT',
+        precioCosto: 9500,
+        precioSugerido: 21990,
+        precioMayorista: 15990,
+        minUnidadesMayorista: 4,
+        stockActual: 22,
+        unidad: 'SET',
+        categoria: 'ESTANDAR',
+        departamento: 'HOGAR',
+        subcategoria: 'Cojines & Textiles de Hogar',
+        especificaciones: 'Set de 4 fundas de terciopelo premium con textura velvet antiestática, colores neutros combinables.'
+      }
+    ];
+
+    let inserted = 0;
+    for (const item of sampleHomeProducts) {
+      const exists = stock.some(s => s.codigo === item.codigo);
+      if (!exists) {
+        await addStockItem(item);
+        inserted++;
+      }
+    }
+    return inserted;
+  };
+
   const togglePromocion = async (id: string) => {
     try {
       const item = stock.find(i => i.id === id);
@@ -2249,6 +2385,7 @@ export const StoreProvider = ({ children }: React.PropsWithChildren<{}>) => {
       stockLoaded,
       setProductDepartment,
       seedSampleBeautyProducts,
+      seedSampleHomeProducts,
       partnerSettlements,
       addPartnerSettlement,
       deletePartnerSettlement,

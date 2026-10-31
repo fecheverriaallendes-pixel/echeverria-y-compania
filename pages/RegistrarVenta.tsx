@@ -507,11 +507,16 @@ export default function RegistrarVenta() {
                   </div>
                   {selectedNewItemStock && (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] font-black uppercase tracking-wider">
-                      <span className={`px-2.5 py-1 rounded-xl text-white ${
-                        (selectedNewItemStock.departamento || getItemDepartamento(selectedNewItemStock)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
-                      }`}>
-                        {(selectedNewItemStock.departamento || getItemDepartamento(selectedNewItemStock)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
-                      </span>
+                      {(() => {
+                        const dep = selectedNewItemStock.departamento || getItemDepartamento(selectedNewItemStock);
+                        if (dep === 'HOGAR') {
+                          return <span className="px-2.5 py-1 rounded-xl text-white bg-amber-700">🏠 Hogar</span>;
+                        }
+                        if (dep === 'BELLEZA') {
+                          return <span className="px-2.5 py-1 rounded-xl text-white bg-pink-600">💄 Belleza</span>;
+                        }
+                        return <span className="px-2.5 py-1 rounded-xl text-white bg-sky-600">💻 Tecnología</span>;
+                      })()}
                       {selectedNewItemStock.subcategoria && (
                         <span className="px-2 py-1 rounded-xl bg-slate-100 text-slate-700">
                           {selectedNewItemStock.subcategoria}
@@ -536,16 +541,21 @@ export default function RegistrarVenta() {
               ) : (
                 <div>
                   <div className="flex gap-2">
-                      <input required list="stock-suggestions" type="text" className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-2xl font-black focus:border-blue-500 outline-none transition-all uppercase" placeholder="CÓDIGO (Ej: TEC-001 o BEL-001)" value={formData.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, false)}/>
+                      <input required list="stock-suggestions" type="text" className="w-full px-8 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-2xl font-black focus:border-blue-500 outline-none transition-all uppercase" placeholder="CÓDIGO (Ej: ALF-001, TEC-001, BEL-001)" value={formData.codigoFardo} onChange={(e) => handleItemCodeChange(e.target.value, false)}/>
                       <input required type="number" className="w-32 px-4 py-6 bg-slate-50 border-2 border-slate-100 rounded-[28px] text-xl font-black outline-none transition-all" placeholder="VALOR" value={formData.valorUnitario || ''} onChange={(e) => setFormData({...formData, valorUnitario: Number(e.target.value)})}/>
                   </div>
                   {selectedStockItem && (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-black uppercase tracking-wider">
-                      <span className={`px-2.5 py-1 rounded-xl text-white ${
-                        (selectedStockItem.departamento || getItemDepartamento(selectedStockItem)) === 'BELLEZA' ? 'bg-pink-600' : 'bg-sky-600'
-                      }`}>
-                        {(selectedStockItem.departamento || getItemDepartamento(selectedStockItem)) === 'BELLEZA' ? '💄 Belleza' : '💻 Tecnología'}
-                      </span>
+                      {(() => {
+                        const dep = selectedStockItem.departamento || getItemDepartamento(selectedStockItem);
+                        if (dep === 'HOGAR') {
+                          return <span className="px-2.5 py-1 rounded-xl text-white bg-amber-700">🏠 Hogar</span>;
+                        }
+                        if (dep === 'BELLEZA') {
+                          return <span className="px-2.5 py-1 rounded-xl text-white bg-pink-600">💄 Belleza</span>;
+                        }
+                        return <span className="px-2.5 py-1 rounded-xl text-white bg-sky-600">💻 Tecnología</span>;
+                      })()}
                       {selectedStockItem.subcategoria && (
                         <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
                           {selectedStockItem.subcategoria}

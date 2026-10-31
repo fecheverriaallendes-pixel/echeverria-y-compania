@@ -7,10 +7,13 @@ export const LOGO_URL = "/mundo_tech_logo.png";
 export const BEAUTY_BRAND_NAME = "ECHEVERRÍA COSMETICS";
 export const BEAUTY_LOGO_URL = "/echeverria_cosmetics_logo.png";
 
+export const HOME_BRAND_NAME = "ECHEVERRÍA HOME & DECO";
+export const HOME_LOGO_URL = "/echeverria_home_logo.svg";
+
 export const PARENT_COMPANY_NAME = "Echeverria & Compañía";
 export const PARENT_COMPANY_LOGO_URL = "/echeverria_compania_logo.svg";
 
-export type GiroType = 'TECNOLOGIA' | 'BELLEZA' | 'MIXTO';
+export type GiroType = 'TECNOLOGIA' | 'BELLEZA' | 'HOGAR' | 'MIXTO';
 
 export interface GiroBrandInfo {
   giro: GiroType;
@@ -41,10 +44,19 @@ export const GIRO_BRANDS: Record<GiroType, GiroBrandInfo> = {
     badgeLabel: 'BELLEZA & COSMÉTICA',
     tagline: 'Belleza, Maquillaje & Cuidado Personal'
   },
+  HOGAR: {
+    giro: 'HOGAR',
+    brandName: 'ECHEVERRÍA HOME & DECO',
+    companyName: 'Echeverria & Compañía',
+    shortName: 'Echeverría Home',
+    logoUrl: '/echeverria_home_logo.svg',
+    badgeLabel: 'ALFOMBRAS & HOGAR',
+    tagline: 'Alfombras Exclusivas, Textiles & Decoración para el Hogar'
+  },
   MIXTO: {
     giro: 'MIXTO',
     brandName: 'ECHEVERRIA & COMPAÑÍA',
-    companyName: 'El Mundo Tech & Echeverria Cosmetics',
+    companyName: 'El Mundo Tech, Echeverria Cosmetics & Home',
     shortName: 'Echeverria & Cía.',
     logoUrl: '/echeverria_compania_logo.svg',
     badgeLabel: 'DESPACHO CORPORATIVO MULTI-GIRO',
@@ -54,7 +66,7 @@ export const GIRO_BRANDS: Record<GiroType, GiroBrandInfo> = {
 
 export type LabelFormat = 'logistica' | 'industrial' | 'clasica';
 
-export type DepartamentoGiro = 'TECNOLOGIA' | 'BELLEZA';
+export type DepartamentoGiro = 'TECNOLOGIA' | 'BELLEZA' | 'HOGAR';
 
 export interface DepartamentoDef {
   id: DepartamentoGiro;
@@ -95,21 +107,51 @@ export const DEPARTAMENTOS: DepartamentoDef[] = [
       'Cuidado Capilar',
       'Packs & Sets de Belleza'
     ]
+  },
+  {
+    id: 'HOGAR',
+    label: 'Alfombras, Hogar & Decoración',
+    shortLabel: 'Alfombras & Hogar',
+    description: 'Alfombras de área, shaggy, pasillos, bajadas de cama, felpudos y textiles',
+    subcategorias: [
+      'Alfombras de Área & Sala',
+      'Alfombras Shaggy & Pelo Largo',
+      'Pasillos & Bajadas de Cama',
+      'Alfombras Vinílicas & Lavables',
+      'Alfombras Nórdicas & Geométricas',
+      'Felpudos & Entradas',
+      'Cojines & Textiles de Hogar',
+      'Otras Alfombras & Decoración'
+    ]
   }
 ];
 
 export const getItemDepartamento = (item: { departamento?: string; codigo?: string; tipo?: string; especificaciones?: string }): DepartamentoGiro => {
+  if (item.departamento === 'HOGAR') return 'HOGAR';
   if (item.departamento === 'BELLEZA') return 'BELLEZA';
   if (item.departamento === 'TECNOLOGIA') return 'TECNOLOGIA';
   
   // Heurística automática por prefijo de código
   const code = (item.codigo || '').toUpperCase();
+  if (code.startsWith('ALF-') || code.startsWith('HOG-') || code.startsWith('RUG-') || code.startsWith('DEC-') || code.startsWith('TAP-')) {
+    return 'HOGAR';
+  }
   if (code.startsWith('BEL-') || code.startsWith('BEA-') || code.startsWith('MAQ-') || code.startsWith('SKIN-')) {
     return 'BELLEZA';
   }
   
   // Heurística automática por palabras clave en nombre o especificaciones
   const text = `${item.tipo || ''} ${item.especificaciones || ''}`.toLowerCase();
+  
+  const homeKeywords = [
+    'alfombra', 'alfombras', 'tapete', 'tapetes', 'shaggy', 'pelo largo', 'felpudo', 'felpudos',
+    'bajada de cama', 'pasillo', 'moqueta', 'piecera', 'pieceras', 'yute', 'decoracion', 'decoración',
+    'manta', 'mantas', 'cojin', 'cojines', 'cojín', 'living', 'comedor', 'antideslizante', 'vinílica', 'vinilica'
+  ];
+  if (homeKeywords.some(kw => text.includes(kw))) {
+    return 'HOGAR';
+  }
+
   const beautyKeywords = [
     'maquillaje', 'labial', 'rimel', 'máscara', 'mascara', 'pestaña', 'ceja', 'corrector', 
     'skincare', 'facial', 'serum', 'sérum', 'hidratante', 'bloqueador', 'solar',
@@ -140,6 +182,7 @@ export const getSaleGiro = (
 
   let hasTech = false;
   let hasBeauty = false;
+  let hasHome = false;
 
   for (const it of itemsList) {
     const stockItem = stockList.find(s => s.codigo === it.codigoFardo);
@@ -149,12 +192,16 @@ export const getSaleGiro = (
 
     if (depto === 'BELLEZA') {
       hasBeauty = true;
+    } else if (depto === 'HOGAR') {
+      hasHome = true;
     } else {
       hasTech = true;
     }
   }
 
-  if (hasTech && hasBeauty) return 'MIXTO';
+  const distinctCount = (hasTech ? 1 : 0) + (hasBeauty ? 1 : 0) + (hasHome ? 1 : 0);
+  if (distinctCount > 1) return 'MIXTO';
+  if (hasHome) return 'HOGAR';
   if (hasBeauty) return 'BELLEZA';
   return 'TECNOLOGIA';
 };

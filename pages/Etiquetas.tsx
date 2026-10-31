@@ -91,6 +91,7 @@ export default function Etiquetas() {
 
   const techQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'TECNOLOGIA').length;
   const beautyQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'BELLEZA').length;
+  const homeQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'HOGAR').length;
   const mixedQueueCount = baseReadyToPrint.filter(s => getSaleGiro(s, stock) === 'MIXTO').length;
 
   const readyToPrint = giroFilter === 'TODOS'
@@ -410,6 +411,21 @@ export default function Etiquetas() {
             <span>💄 Echeverria Cosmetics</span>
             <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${giroFilter === 'BELLEZA' ? 'bg-white/25 text-white' : 'bg-pink-200 text-pink-900'}`}>
               {beautyQueueCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setGiroFilter('HOGAR'); playSound('click'); }}
+            className={`px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              giroFilter === 'HOGAR'
+                ? 'bg-gradient-to-r from-amber-700 to-orange-700 text-white shadow-md shadow-amber-900/20'
+                : 'bg-amber-50/80 text-amber-900 hover:bg-amber-100 border border-amber-200/50'
+            }`}
+          >
+            <span>🏠 Echeverría Home & Deco</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${giroFilter === 'HOGAR' ? 'bg-white/25 text-white' : 'bg-amber-200 text-amber-950'}`}>
+              {homeQueueCount}
             </span>
           </button>
 

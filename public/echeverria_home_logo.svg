@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <linearGradient id="homeTerracotta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7c2d12" />
+      <stop offset="50%" stop-color="#9a3412" />
+      <stop offset="100%" stop-color="#c2410c" />
+    </linearGradient>
+    <linearGradient id="warmAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b45309" />
+      <stop offset="50%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#fbbf24" />
+    </linearGradient>
+    <linearGradient id="creamBase" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fffbeb" />
+      <stop offset="100%" stop-color="#fef3c7" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Shield / Architectural Frame -->
+  <polygon points="250,25 450,140 450,370 250,480 50,370 50,140" fill="url(#creamBase)" stroke="url(#homeTerracotta)" stroke-width="10" stroke-linejoin="round" />
+  <polygon points="250,45 430,150 430,355 250,455 70,355 70,150" fill="none" stroke="url(#warmAmber)" stroke-width="3" stroke-dasharray="8,5" />
+
+  <!-- Central Emblem: Home & Rug Motif -->
+  <g transform="translate(250, 190)">
+    <!-- Central Circle Base -->
+    <circle cx="0" cy="0" r="85" fill="url(#homeTerracotta)" stroke="url(#warmAmber)" stroke-width="4" />
+    
+    <!-- Stylized Architectural Roof / Arch of Home -->
+    <path d="M -50 -10 L 0 -52 L 50 -10 L 40 -10 L 0 -44 L -40 -10 Z" fill="#ffffff" />
+    
+    <!-- Stylized Rug / Textile Diamond Pattern in center -->
+    <polygon points="0,-25 32,2 0,28 -32,2" fill="none" stroke="#fbbf24" stroke-width="4" />
+    <polygon points="0,-12 16,2 0,16 -16,2" fill="#fbbf24" />
+    <circle cx="0" cy="2" r="4" fill="#7c2d12" />
+
+    <!-- Rug Fringes / Border Details -->
+    <line x1="-36" y1="36" x2="36" y2="36" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+    <line x1="-30" y1="42" x2="-30" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="-20" y1="42" x2="-20" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="-10" y1="42" x2="-10" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="0" y1="42" x2="0" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="10" y1="42" x2="10" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="20" y1="42" x2="20" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+    <line x1="30" y1="42" x2="30" y2="48" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" />
+  </g>
+
+  <!-- Stars of Premium Quality -->
+  <g fill="url(#warmAmber)">
+    <polygon points="250,85 253,95 264,95 255,101 258,111 250,105 242,111 245,101 236,95 247,95" />
+    <polygon points="215,95 218,103 227,103 220,108 222,116 215,111 208,116 210,108 203,103 212,103" />
+    <polygon points="285,95 288,103 297,103 290,108 292,116 285,111 278,116 280,108 273,103 282,103" />
+  </g>
+
+  <!-- Divider Line -->
+  <line x1="100" y1="315" x2="400" y2="315" stroke="url(#homeTerracotta)" stroke-width="4" />
+  <circle cx="250" cy="315" r="7" fill="url(#warmAmber)" stroke="#7c2d12" stroke-width="2" />
+
+  <!-- Typography: ECHEVERRIA -->
+  <text x="250" y="360" text-anchor="middle" font-family="'Cinzel', 'Playfair Display', 'Times New Roman', serif" font-size="32" font-weight="900" fill="#7c2d12" letter-spacing="4">
+    ECHEVERRIA
+  </text>
+
+  <!-- Typography: HOME & DECORACIÓN -->
+  <text x="250" y="398" text-anchor="middle" font-family="'Montserrat', Arial, sans-serif" font-size="19" font-weight="900" fill="#b45309" letter-spacing="4">
+    HOME &amp; DECO
+  </text>
+
+  <!-- Subtitle: ALFOMBRAS & TEXTILES HOGAR -->
+  <text x="250" y="428" text-anchor="middle" font-family="'Montserrat', Arial, sans-serif" font-size="10.5" font-weight="800" fill="#78350f" letter-spacing="3">
+    ALFOMBRAS • TEXTILES • CONFORT
+  </text>
+</svg>
